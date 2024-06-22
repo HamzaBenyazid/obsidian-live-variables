@@ -12,14 +12,14 @@ The Live Variables Plugin for Obsidian helps you manage and reuse data within yo
 
 1. Install the Plugin:
 
-- Download the plugin from the GitHub repository.
-- Place the plugin folder in your Obsidian plugins directory.
-- Enable the plugin in the Obsidian settings.
+  - Download the plugin from the GitHub repository.
+  - Place the plugin folder in your Obsidian plugins directory.
+  - Enable the plugin in the Obsidian settings.
 
 2. Define Variables:
 
-- Open the note where you want to use variables.
-- In the note's properties, define your variables. For example
+  - Open the note where you want to use variables.
+  - In the note's properties, define your variables. For example
   ```
   ---
     projectName: Obsidian Live Variables Plugin
