@@ -65,9 +65,13 @@ export default class LiveVariable extends Plugin {
 					new Notice(`property ${key} changed to ${newValue}. Resolving all references...`);
 					let file = this.app.vault.getFileByPath(path.path);
 					if (file) {
-						let re = new RegExp(String.raw`<span id="${key}">.+</span>`, "g")
+						let re = new RegExp(String.raw`<span id="${key}">.+?<\/span>`, "g")
+						console.log(re.exec(data))
 						data = data.replace(re, `<span id="${key}">${newValue}</span>`)
-						this.app.vault.modify(file, data)
+						const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+						if (view) {
+							view.editor.setValue(data);
+						}
 					}
 					this.properties = frontmatterProperties;
 				}
