@@ -1,7 +1,5 @@
 import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, SuggestModal } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
-
 interface LiveVariableSettings {
 	mySetting: string;
 }
@@ -103,20 +101,17 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 		this.onSelect = onSelect;
 	}
 
-	// Returns all available suggestions.
 	getSuggestions(query: string): Property[] {
 		return Object.entries(this.properties).filter((property) =>
 			property[0].toLowerCase().includes(query.toLowerCase())
 		).map(entry => ({ key: entry[0], value: entry[1] }));
 	}
 
-	// Renders each suggestion item.
 	renderSuggestion(property: Property, el: HTMLElement) {
 		el.createEl("div", { text: property.key });
 		el.createEl("small", { text: property.value });
 	}
 
-	// Perform action on the selected suggestion.
 	onChooseSuggestion(property: Property, evt: MouseEvent | KeyboardEvent) {
 		this.onSelect(property);
 	}
