@@ -1,4 +1,4 @@
-# Obsidian Sample Plugin
+# Obsidian Live Variable Plugin
 
 The Live Variables Plugin for Obsidian helps you manage and reuse data within your notes by allowing you to define variables in your note's properties. When you change the value of a variable, all occurrences of that variable in your note are automatically updated. This ensures consistency and can save you time when working with frequently changing information.
 
