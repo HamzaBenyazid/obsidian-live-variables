@@ -5,7 +5,6 @@
 	"minAppVersion": "0.15.0",
 	"description": "A plugin that allows you to define variables in your note's properties and reuse them throughout your content.",
 	"author": "Hamza Ben Yazid",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"authorUrl": "https://github.com/HamzaBenyazid",
 	"isDesktopOnly": false
 }
