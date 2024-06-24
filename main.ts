@@ -14,7 +14,7 @@ export default class LiveVariable extends Plugin {
 	changedProperty = (newProperties: FrontMatterCache | undefined) => {
 		for (let [newPropKey, newPropVal] of Object.entries(newProperties ?? {})) {
 			let currentPropVal = this.properties?.[newPropKey];
-			if (currentPropVal !== newPropVal) {
+			if (JSON.stringify(currentPropVal) !== JSON.stringify(newPropVal)) {
 				return [newPropKey, newPropVal];
 			}
 		}
@@ -62,7 +62,6 @@ export default class LiveVariable extends Plugin {
 				if (changedProperty) {
 					let key = changedProperty[0]
 					let newValue = changedProperty[1]
-					new Notice(`property ${key} changed to ${newValue}. Resolving all references...`);
 					let file = this.app.vault.getFileByPath(path.path);
 					if (file) {
 						let re = new RegExp(String.raw`<span id="${key}">.+?<\/span>`, "g")
