@@ -3,7 +3,7 @@
 	"name": "Live Variables",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin that allows you to define variables in your note's properties and reuse them throughout your content.",
+	"description": "Define variables in your note's properties and reuse them throughout your content.",
 	"author": "Hamza Ben Yazid",
 	"authorUrl": "https://github.com/HamzaBenyazid",
 	"isDesktopOnly": false
