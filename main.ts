@@ -1,12 +1,4 @@
-import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, SuggestModal } from 'obsidian';
-
-interface LiveVariableSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: LiveVariableSettings = {
-	mySetting: 'default'
-}
+import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, SuggestModal } from 'obsidian';
 
 export default class LiveVariable extends Plugin {
 	properties: FrontMatterCache | undefined;
@@ -25,29 +17,24 @@ export default class LiveVariable extends Plugin {
 		await this.loadSettings();
 
 		// initialize properties
-		this.app.workspace.on("file-open", (file)=>{
-			if(file){
+		this.app.workspace.on("active-leaf-change", (leaf) => {
+			const file = this.app.workspace.getActiveFile();
+			if (file) {
 				this.properties = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			}
 		})
 
 		this.addCommand({
 			id: 'insert-live-variable',
-			name: 'Insert Live Variable',
+			name: 'Insert live variable',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				if (view.file) {
-					this.properties = this.app.metadataCache.getFileCache(view.file)?.frontmatter;
-				}
-				let file = view.file;
-				if (file) {
-					new PropertySelectionModal(
-						this.app,
-						this.properties ?? {},
-						(property) => {
-							editor.replaceSelection(`<span id="${property.key}">${property.value}</span>`);
-							new Notice(`Variable ${property.key} inserted`);
-						}).open();
-				}
+				new PropertySelectionModal(
+					this.app,
+					this.properties ?? {},
+					(property) => {
+						editor.replaceSelection(`<span id="${property.key}">${property.value}</span>`);
+						new Notice(`Variable ${property.key} inserted`);
+					}).open();
 			}
 		});
 
@@ -65,12 +52,7 @@ export default class LiveVariable extends Plugin {
 					let file = this.app.vault.getFileByPath(path.path);
 					if (file) {
 						let re = new RegExp(String.raw`<span id="${key}">.+?<\/span>`, "g")
-						console.log(re.exec(data))
-						data = data.replace(re, `<span id="${key}">${newValue}</span>`)
-						const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-						if (view) {
-							view.editor.setValue(data);
-						}
+						this.app.vault.process(file, (data) => data.replace(re, `<span id="${key}">${newValue}</span>`))
 					}
 					this.properties = frontmatterProperties;
 				}
