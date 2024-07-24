@@ -1,11 +1,9 @@
 import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, SuggestModal } from 'obsidian';
 
 export default class LiveVariable extends Plugin {
-	properties: FrontMatterCache | undefined;
-
-	changedProperty = (newProperties: FrontMatterCache | undefined) => {
+	changedProperty = (currentProperties: FrontMatterCache | undefined, newProperties: FrontMatterCache | undefined) => {
 		for (let [newPropKey, newPropVal] of Object.entries(newProperties ?? {})) {
-			let currentPropVal = this.properties?.[newPropKey];
+			let currentPropVal = currentProperties?.[newPropKey];
 			if (JSON.stringify(currentPropVal) !== JSON.stringify(newPropVal)) {
 				return [newPropKey, newPropVal];
 			}
@@ -14,13 +12,14 @@ export default class LiveVariable extends Plugin {
 	}
 
 	async onload() {
+		let properties: FrontMatterCache | undefined;
 		await this.loadSettings();
 
 		// initialize properties
 		this.app.workspace.on("active-leaf-change", (leaf) => {
 			const file = this.app.workspace.getActiveFile();
 			if (file) {
-				this.properties = this.app.metadataCache.getFileCache(file)?.frontmatter;
+				properties = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			}
 		})
 
@@ -30,7 +29,7 @@ export default class LiveVariable extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(
 					this.app,
-					this.properties ?? {},
+					view,
 					(property) => {
 						editor.replaceSelection(`<span id="${property.key}">${property.value}</span>`);
 						new Notice(`Variable ${property.key} inserted`);
@@ -39,13 +38,13 @@ export default class LiveVariable extends Plugin {
 		});
 
 		this.registerEvent(
-			this.app.metadataCache.on("changed", (path, data, cache) => {
+			this.app.metadataCache.on("changed", (path, _, cache) => {
 				let frontmatterProperties = cache.frontmatter
-				if (!this.properties) {
-					this.properties = frontmatterProperties;
+				if (!properties) {
+					properties = frontmatterProperties;
 					return
 				}
-				let changedProperty = this.changedProperty(frontmatterProperties)
+				let changedProperty = this.changedProperty(properties ,frontmatterProperties)
 				if (changedProperty) {
 					let key = changedProperty[0]
 					let newValue = changedProperty[1]
@@ -54,7 +53,7 @@ export default class LiveVariable extends Plugin {
 						let re = new RegExp(String.raw`<span id="${key}">.+?<\/span>`, "g")
 						this.app.vault.process(file, (data) => data.replace(re, `<span id="${key}">${newValue}</span>`))
 					}
-					this.properties = frontmatterProperties;
+					properties = frontmatterProperties;
 				}
 			}),
 		);
@@ -78,18 +77,22 @@ interface Property {
 
 export class PropertySelectionModal extends SuggestModal<Property> {
 	onSelect: (property: Property) => any
-	properties: FrontMatterCache
+	view: MarkdownView
 
-	constructor(app: App, properties: FrontMatterCache, onSelect: (property: Property) => any) {
+	constructor(app: App, view: MarkdownView, onSelect: (property: Property) => any) {
 		super(app);
-		this.properties = properties;
+		this.view = view;
 		this.onSelect = onSelect;
 	}
 
 	getSuggestions(query: string): Property[] {
-		return Object.entries(this.properties).filter((property) =>
-			property[0].toLowerCase().includes(query.toLowerCase())
-		).map(entry => ({ key: entry[0], value: entry[1] }));
+		if(this.view.file){
+			const properties = this.app.metadataCache.getFileCache(this.view.file)?.frontmatter ?? {}
+			return Object.entries(properties).filter((property) =>
+				property[0].toLowerCase().includes(query.toLowerCase())
+			).map(entry => ({ key: entry[0], value: entry[1] }));
+		}
+		return []
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {
