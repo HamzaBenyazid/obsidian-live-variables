@@ -1,6 +1,11 @@
 import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, SuggestModal } from 'obsidian';
 
 export default class LiveVariable extends Plugin {
+
+	escapeRegExp = (text: string): string => {
+		return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	}
+
 	changedProperty = (currentProperties: FrontMatterCache | undefined, newProperties: FrontMatterCache | undefined) => {
 		for (let [newPropKey, newPropVal] of Object.entries(newProperties ?? {})) {
 			let currentPropVal = currentProperties?.[newPropKey];
@@ -31,7 +36,7 @@ export default class LiveVariable extends Plugin {
 					this.app,
 					view,
 					(property) => {
-						editor.replaceSelection(`<span id="${property.key}">${property.value}</span>`);
+						editor.replaceSelection(`<span id="${property.key}"/>${property.value}`);
 						new Notice(`Variable ${property.key} inserted`);
 					}).open();
 			}
@@ -50,8 +55,8 @@ export default class LiveVariable extends Plugin {
 					let newValue = changedProperty[1]
 					let file = this.app.vault.getFileByPath(path.path);
 					if (file) {
-						let re = new RegExp(String.raw`<span id="${key}">.+?<\/span>`, "g")
-						this.app.vault.process(file, (data) => data.replace(re, `<span id="${key}">${newValue}</span>`))
+						let re = new RegExp(String.raw`<span id="${key}"/>${this.escapeRegExp(properties[key])}`, "g")
+						this.app.vault.process(file, (data) => data.replace(re, `<span id="${key}"/>${newValue}`))
 					}
 					properties = frontmatterProperties;
 				}
