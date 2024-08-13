@@ -3,7 +3,7 @@ import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, SuggestMod
 export default class LiveVariable extends Plugin {
 
 	escapeRegExp = (text: string): string => {
-		return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		return text?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	changedProperty = (currentProperties: FrontMatterCache | undefined, newProperties: FrontMatterCache | undefined) => {
