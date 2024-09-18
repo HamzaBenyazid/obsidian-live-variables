@@ -1,78 +1,139 @@
-import { App, Editor, FrontMatterCache, MarkdownView, Notice, Plugin, SuggestModal } from 'obsidian';
+import {
+	App,
+	Editor,
+	FrontMatterCache,
+	MarkdownView,
+	Notice,
+	Plugin,
+	SuggestModal,
+	TFile,
+} from "obsidian";
 
 export default class LiveVariable extends Plugin {
-
 	escapeRegExp = (text: string): string => {
-		return text?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
+		return text?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	};
 
-	changedProperty = (currentProperties: FrontMatterCache | undefined, newProperties: FrontMatterCache | undefined) => {
-		for (let [newPropKey, newPropVal] of Object.entries(newProperties ?? {})) {
-			let currentPropVal = currentProperties?.[newPropKey];
+	propertyChanged = (
+		currentProperties: FrontMatterCache | undefined,
+		newProperties: FrontMatterCache | undefined
+	) => {
+		for (const [newPropKey, newPropVal] of Object.entries(
+			newProperties ?? {}
+		)) {
+			const currentPropVal = currentProperties?.[newPropKey];
 			if (JSON.stringify(currentPropVal) !== JSON.stringify(newPropVal)) {
-				return [newPropKey, newPropVal];
+				return true;
 			}
 		}
-		return undefined;
-	}
+		return false;
+	};
 
 	async onload() {
-		let properties: FrontMatterCache | undefined;
+		let fileProperties: FrontMatterCache | undefined;
 		await this.loadSettings();
 
 		// initialize properties
 		this.app.workspace.on("active-leaf-change", (leaf) => {
 			const file = this.app.workspace.getActiveFile();
 			if (file) {
-				properties = this.app.metadataCache.getFileCache(file)?.frontmatter;
+				fileProperties =
+					this.app.metadataCache.getFileCache(file)?.frontmatter;
+				this.renderVariables(file);
 			}
-		})
+		});
 
 		this.addCommand({
-			id: 'insert-live-variable',
-			name: 'Insert live variable',
+			id: "insert-local-variable",
+			name: "Insert local variable",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(
 					this.app,
 					view,
+					false,
 					(property) => {
-						editor.replaceSelection(`<span id="${property.key}"/>${property.value}`);
+						editor.replaceSelection(
+							`<span id="${property.key}"/>${property.value}<span type="end"/>`
+						);
 						new Notice(`Variable ${property.key} inserted`);
-					}).open();
-			}
+					}
+				).open();
+			},
+		});
+
+		this.addCommand({
+			id: "insert-global-variable",
+			name: "Insert variable from another file",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				new PropertySelectionModal(this.app, view, true, (property) => {
+					editor.replaceSelection(
+						`<span id="${property.key}"/>${property.value}<span type="end"/>`
+					);
+					new Notice(`Variable ${property.key} inserted`);
+				}).open();
+			},
 		});
 
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (path, _, cache) => {
-				let frontmatterProperties = cache.frontmatter
-				if (!properties) {
-					properties = frontmatterProperties;
-					return
+				const frontmatterProperties = cache.frontmatter;
+				if (!fileProperties) {
+					fileProperties = frontmatterProperties;
+					return;
 				}
-				let changedProperty = this.changedProperty(properties ,frontmatterProperties)
-				if (changedProperty) {
-					let key = changedProperty[0]
-					let newValue = changedProperty[1]
-					let file = this.app.vault.getFileByPath(path.path);
+				const propertyChanged = this.propertyChanged(
+					fileProperties,
+					frontmatterProperties
+				);
+				if (propertyChanged) {
+					const file = this.app.vault.getFileByPath(path.path);
 					if (file) {
-						let re = new RegExp(String.raw`<span id="${key}"/>${this.escapeRegExp(properties[key])}`, "g")
-						this.app.vault.process(file, (data) => data.replace(re, `<span id="${key}"/>${newValue}`))
+						this.renderVariables(file);
 					}
-					properties = frontmatterProperties;
+					fileProperties = frontmatterProperties;
 				}
-			}),
+			})
 		);
 	}
 
-	onunload() {
-
+	renderVariables(file: TFile) {
+		const re = new RegExp(
+			String.raw`<span id="(.+?)"/>.+?<span type="end"/>`,
+			"g"
+		);
+		this.app.vault.process(file, (data) => {
+			[...data.matchAll(re)].forEach((match) => {
+				const key = match[1];
+				const lastSlashIndex = key.lastIndexOf("/");
+				let variableId;
+				let variableFile;
+				if (lastSlashIndex === -1) {
+					variableFile = file;
+					variableId = key;
+				} else {
+					const filePath = key.substring(0, lastSlashIndex);
+					variableId = key.substring(lastSlashIndex + 1);
+					variableFile = this.app.vault.getFileByPath(filePath);
+				}
+				if (variableFile) {
+					const value =
+						this.app.metadataCache.getFileCache(variableFile)
+							?.frontmatter?.[variableId]; // fetch value
+					data = data.replace(
+						match[0],
+						`<span id="${key}"/>${value}<span type="end"/>`
+					);
+				}
+			});
+			return data;
+		});
 	}
 
-	async loadSettings() {
-	}
+	onunload() {}
 
-	async saveSettings() {
-	}
+	async loadSettings() {}
+
+	async saveSettings() {}
 }
 
 interface Property {
@@ -81,23 +142,64 @@ interface Property {
 }
 
 export class PropertySelectionModal extends SuggestModal<Property> {
-	onSelect: (property: Property) => any
-	view: MarkdownView
+	onSelect: (property: Property) => any;
+	view: MarkdownView;
+	global: boolean;
 
-	constructor(app: App, view: MarkdownView, onSelect: (property: Property) => any) {
+	constructor(
+		app: App,
+		view: MarkdownView,
+		global: boolean,
+		onSelect: (property: Property) => any
+	) {
 		super(app);
 		this.view = view;
+		this.global = global;
 		this.onSelect = onSelect;
 	}
 
 	getSuggestions(query: string): Property[] {
-		if(this.view.file){
-			const properties = this.app.metadataCache.getFileCache(this.view.file)?.frontmatter ?? {}
-			return Object.entries(properties).filter((property) =>
-				property[0].toLowerCase().includes(query.toLowerCase())
-			).map(entry => ({ key: entry[0], value: entry[1] }));
+		if (this.global) {
+			return this.getGlobalSuggestions(query);
 		}
-		return []
+		return this.getLocalSuggestions(query);
+	}
+
+	getLocalSuggestions(query: string): Property[] {
+		if (this.view.file) {
+			const properties =
+				this.app.metadataCache.getFileCache(this.view.file)
+					?.frontmatter ?? {};
+			return Object.entries(properties)
+				.filter((property) =>
+					property[0].toLowerCase().includes(query.toLowerCase())
+				)
+				.map((entry) => ({ key: entry[0], value: entry[1] }));
+		}
+		return [];
+	}
+
+	getGlobalSuggestions(query: string): Property[] {
+		const properties = Object.assign(
+			{},
+			...this.app.vault.getFiles().flatMap((file) => {
+				let props =
+					this.app.metadataCache.getFileCache(file)?.frontmatter;
+				if (props) {
+					props = Object.fromEntries(
+						Object.entries(props).map(([key, value]) => {
+							return [file.path + "/" + key, value];
+						})
+					);
+				}
+				return props;
+			})
+		);
+		return Object.entries(properties)
+			.filter((property) =>
+				property[0].toLowerCase().includes(query.toLowerCase())
+			)
+			.map((entry) => ({ key: entry[0], value: entry[1] as string }));
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {
