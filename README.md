@@ -26,8 +26,8 @@ The Live Variables Plugin for Obsidian allows you to manage and reuse data acros
 
 3. **Insert Variables**:
    You can insert variables using the following options:
-   - **Local Variables**: Insert a variable defined within the current note by using the command: `Live Variable: Insert local variable`.
-   - **Vault-Wide Variables**: Insert a variable defined in any note within the vault by using the command: `Live Variable: Insert variable from another note`.
+   - **Local Variables**: Insert a variable defined within the current note by using the command: `Live Variables: Insert local variable`.
+   - **Vault-Wide Variables**: Insert a variable defined in any note within the vault by using the command: `Live Variables: Insert variable from another note`.
 
 4. **Update Variables**:
    - Modify the value of a variable in the note’s properties, and all references to that variable across your vault will be updated instantly.
