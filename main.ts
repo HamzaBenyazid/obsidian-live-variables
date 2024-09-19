@@ -63,7 +63,7 @@ export default class LiveVariable extends Plugin {
 
 		this.addCommand({
 			id: "insert-global-variable",
-			name: "Insert variable from another file",
+			name: "Insert variable from another note",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(this.app, view, true, (property) => {
 					editor.replaceSelection(
