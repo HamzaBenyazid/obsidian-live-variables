@@ -47,5 +47,5 @@ export const stringifyIfObj = (obj: any) => {
 	if (typeof obj === 'object') {
 		return JSON.stringify(obj);
 	}
-	return obj;
+	return String(obj);
 };

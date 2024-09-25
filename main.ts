@@ -203,12 +203,12 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 			.filter((property) =>
 				property[0].toLowerCase().includes(query.toLowerCase())
 			)
-			.map((entry) => ({ key: entry[0], value: stringifyIfObj(entry[1]) }));
+			.map((entry) => ({ key: entry[0], value: stringifyIfObj(entry[1])}));
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {
 		el.createEl('div', { text: property.key });
-		el.createEl('small', { text: property.value });
+		el.createEl('small', { text: property.value.substring(0, 100) + (property.value.length > 100 ? '...' : '') });
 	}
 
 	onChooseSuggestion(property: Property, evt: MouseEvent | KeyboardEvent) {
