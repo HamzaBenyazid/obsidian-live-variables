@@ -7,13 +7,10 @@ import {
 	Plugin,
 	SuggestModal,
 	TFile,
-} from "obsidian";
+} from 'obsidian';
+import { getAllNestedKeyValuePairs, getValueByPath, stringifyIfObj } from 'utils';
 
 export default class LiveVariable extends Plugin {
-	escapeRegExp = (text: string): string => {
-		return text?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	};
-
 	propertyChanged = (
 		currentProperties: FrontMatterCache | undefined,
 		newProperties: FrontMatterCache | undefined
@@ -34,7 +31,7 @@ export default class LiveVariable extends Plugin {
 		await this.loadSettings();
 
 		// initialize properties
-		this.app.workspace.on("active-leaf-change", (leaf) => {
+		this.app.workspace.on('active-leaf-change', (leaf) => {
 			const file = this.app.workspace.getActiveFile();
 			if (file) {
 				fileProperties =
@@ -44,8 +41,8 @@ export default class LiveVariable extends Plugin {
 		});
 
 		this.addCommand({
-			id: "insert-local-variable",
-			name: "Insert local variable",
+			id: 'insert-local-variable',
+			name: 'Insert local variable',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(
 					this.app,
@@ -62,8 +59,8 @@ export default class LiveVariable extends Plugin {
 		});
 
 		this.addCommand({
-			id: "insert-global-variable",
-			name: "Insert variable from another note",
+			id: 'insert-global-variable',
+			name: 'Insert variable from another note',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(this.app, view, true, (property) => {
 					editor.replaceSelection(
@@ -75,7 +72,7 @@ export default class LiveVariable extends Plugin {
 		});
 
 		this.registerEvent(
-			this.app.metadataCache.on("changed", (path, _, cache) => {
+			this.app.metadataCache.on('changed', (path, _, cache) => {
 				const frontmatterProperties = cache.frontmatter;
 				if (!fileProperties) {
 					fileProperties = frontmatterProperties;
@@ -99,12 +96,12 @@ export default class LiveVariable extends Plugin {
 	renderVariables(file: TFile) {
 		const re = new RegExp(
 			String.raw`<span id="(.+?)"/>.+?<span type="end"/>`,
-			"g"
+			'g'
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
 				const key = match[1];
-				const lastSlashIndex = key.lastIndexOf("/");
+				const lastSlashIndex = key.lastIndexOf('/');
 				let variableId;
 				let variableFile;
 				if (lastSlashIndex === -1) {
@@ -116,12 +113,14 @@ export default class LiveVariable extends Plugin {
 					variableFile = this.app.vault.getFileByPath(filePath);
 				}
 				if (variableFile) {
-					const value =
+					const value = getValueByPath(
 						this.app.metadataCache.getFileCache(variableFile)
-							?.frontmatter?.[variableId]; // fetch value
+							?.frontmatter,
+						variableId
+					);
 					data = data.replace(
 						match[0],
-						`<span id="${key}"/>${value}<span type="end"/>`
+						`<span id="${key}"/>${stringifyIfObj(value)}<span type="end"/>`
 					);
 				}
 			});
@@ -142,7 +141,7 @@ interface Property {
 }
 
 export class PropertySelectionModal extends SuggestModal<Property> {
-	onSelect: (property: Property) => any;
+	onSelect: (property: Property) => void;
 	view: MarkdownView;
 	global: boolean;
 
@@ -150,7 +149,7 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 		app: App,
 		view: MarkdownView,
 		global: boolean,
-		onSelect: (property: Property) => any
+		onSelect: (property: Property) => void
 	) {
 		super(app);
 		this.view = view;
@@ -170,11 +169,14 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 			const properties =
 				this.app.metadataCache.getFileCache(this.view.file)
 					?.frontmatter ?? {};
-			return Object.entries(properties)
+			return getAllNestedKeyValuePairs(properties)
 				.filter((property) =>
 					property[0].toLowerCase().includes(query.toLowerCase())
 				)
-				.map((entry) => ({ key: entry[0], value: entry[1] }));
+				.map((entry) => ({
+					key: entry[0],
+					value: stringifyIfObj(entry[1]),
+				}));
 		}
 		return [];
 	}
@@ -182,14 +184,16 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 	getGlobalSuggestions(query: string): Property[] {
 		const properties = Object.assign(
 			{},
+
 			...this.app.vault.getFiles().flatMap((file) => {
 				let props =
 					this.app.metadataCache.getFileCache(file)?.frontmatter;
 				if (props) {
 					props = Object.fromEntries(
-						Object.entries(props).map(([key, value]) => {
-							return [file.path + "/" + key, value];
-						})
+						getAllNestedKeyValuePairs(props).map(([k, v]) => [
+							file.path + '/' + k,
+							v,
+						])
 					);
 				}
 				return props;
@@ -199,12 +203,12 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 			.filter((property) =>
 				property[0].toLowerCase().includes(query.toLowerCase())
 			)
-			.map((entry) => ({ key: entry[0], value: entry[1] as string }));
+			.map((entry) => ({ key: entry[0], value: stringifyIfObj(entry[1]) }));
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {
-		el.createEl("div", { text: property.key });
-		el.createEl("small", { text: property.value });
+		el.createEl('div', { text: property.key });
+		el.createEl('small', { text: property.value });
 	}
 
 	onChooseSuggestion(property: Property, evt: MouseEvent | KeyboardEvent) {
