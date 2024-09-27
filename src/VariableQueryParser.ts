@@ -70,12 +70,12 @@ export const parseArgs = (
 	if(func !== Functions.JS_FUNC){
 		return argsStr.split(",").map((v) => v.trim());
 	}
-	const lambdaFuncRegex = /^'(.+)',(.+)/gm
+	const lambdaFuncRegex = /(.+),\s*func\s*=\s*(.+)/gm
 	const match = lambdaFuncRegex.exec(argsStr)
 	if(match){
 		const args = [] 
-		const lambdaFunc = match[1];
-		args.push(lambdaFunc, ...match[2].split(",").map((v) => v.trim()));
+		const lambdaFunc = match[2];
+		args.push(lambdaFunc, ...match[1].split(",").map((v) => v.trim()));
 		return args;
 	} else {
 		throw Error("parseArgs error")
