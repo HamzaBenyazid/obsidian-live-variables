@@ -8,7 +8,13 @@ import {
 	SuggestModal,
 	TFile,
 } from 'obsidian';
-import { getAllNestedKeyValuePairs, getValueByPath, stringifyIfObj } from 'utils';
+import {
+	VarQuery,
+	computeValue,
+	getVariableValue,
+	parseQuery,
+} from './VariableQueryParser';
+import { getAllNestedKeyValuePairs, stringifyIfObj } from './utils';
 
 export default class LiveVariable extends Plugin {
 	propertyChanged = (
@@ -94,33 +100,55 @@ export default class LiveVariable extends Plugin {
 	}
 
 	renderVariables(file: TFile) {
+		this.renderVariablesV1(file);
+		this.renderVariablesV2(file);
+	}
+
+	/**
+	 * @deprecated use the {@link renderVariablesV2} method
+	 */
+	renderVariablesV1(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span id="(.+?)"/>.+?<span type="end"/>`,
+			String.raw`<span id="(.+?)"\/>.*?<span type="end"\/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
 				const key = match[1];
-				const lastSlashIndex = key.lastIndexOf('/');
-				let variableId;
-				let variableFile;
-				if (lastSlashIndex === -1) {
-					variableFile = file;
-					variableId = key;
-				} else {
-					const filePath = key.substring(0, lastSlashIndex);
-					variableId = key.substring(lastSlashIndex + 1);
-					variableFile = this.app.vault.getFileByPath(filePath);
-				}
-				if (variableFile) {
-					const value = getValueByPath(
-						this.app.metadataCache.getFileCache(variableFile)
-							?.frontmatter,
-						variableId
-					);
+				const value = getVariableValue(key, {
+					currentFile: file,
+					app: this.app,
+				});
+				if (value) {
 					data = data.replace(
 						match[0],
-						`<span id="${key}"/>${stringifyIfObj(value)}<span type="end"/>`
+						`<span query="get(${key})"/>${stringifyIfObj(
+							value
+						)}<span type="end"/>`
+					);
+				} else {
+					throw Error(`Couldn't get value of variable ${key}`)
+				}
+			});
+			return data;
+		});
+	}
+
+	renderVariablesV2(file: TFile) {
+		const re = new RegExp(
+			String.raw`<span query="(.+?)"/>.*?<span type="end"/>`,
+			'g'
+		);
+		this.app.vault.process(file, (data) => {
+			[...data.matchAll(re)].forEach((match) => {
+				const query = match[1];
+				const context = { currentFile: file, app: this.app };
+				const varQuery: VarQuery = parseQuery(query, context);
+				const value = computeValue(varQuery, context);
+				if (value) {
+					data = data.replace(
+						match[0],
+						`<span query="${query}"/>${stringifyIfObj(value)}<span type="end"/>`
 					);
 				}
 			});
@@ -203,12 +231,19 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 			.filter((property) =>
 				property[0].toLowerCase().includes(query.toLowerCase())
 			)
-			.map((entry) => ({ key: entry[0], value: stringifyIfObj(entry[1])}));
+			.map((entry) => ({
+				key: entry[0],
+				value: stringifyIfObj(entry[1]),
+			}));
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {
 		el.createEl('div', { text: property.key });
-		el.createEl('small', { text: property.value.substring(0, 100) + (property.value.length > 100 ? '...' : '') });
+		el.createEl('small', {
+			text:
+				property.value.substring(0, 100) +
+				(property.value.length > 100 ? '...' : ''),
+		});
 	}
 
 	onChooseSuggestion(property: Property, evt: MouseEvent | KeyboardEvent) {

@@ -1,4 +1,4 @@
-export const getValueByPath = (obj: any, path: string): string => {
+export const getValueByPath = (obj: any, path: string): any => {
 	// Split the path by both dots and brackets, and filter out empty parts
 	const keys = path.split(/\.|\[|\]/).filter(Boolean);
 
@@ -48,4 +48,15 @@ export const stringifyIfObj = (obj: any) => {
 		return JSON.stringify(obj);
 	}
 	return String(obj);
+};
+
+export const checkArrayTypes = (arr: any[]) => {
+	if (!Array.isArray(arr)) return 'string'; // Ensure input is an array
+
+	const firstType = typeof arr[0]; // Get the type of the first element
+
+	// Check if all elements have the same type
+	const allSameType = arr.every((item) => typeof item === firstType);
+
+	return allSameType ? firstType : 'string';
 };
