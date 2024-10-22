@@ -1,12 +1,13 @@
+import { App } from 'obsidian';
+
 export const getValueByPath = (obj: any, path: string): any => {
-	// Split the path by both dots and brackets, and filter out empty parts
 	const keys = path.split(/\.|\[|\]/).filter(Boolean);
 
 	return keys.reduce((acc, key) => {
 		if (acc && typeof acc === 'object' && acc.hasOwnProperty(key)) {
 			return acc[key];
 		}
-		return undefined; // Return undefined if the key doesn't exist
+		return undefined;
 	}, obj);
 };
 
@@ -14,19 +15,16 @@ export const getAllNestedKeyValuePairs = (obj: any): [string, any][] => {
 	const result: [string, any][] = [];
 
 	function recurse(currentObj: any, currentPath: string): void {
-		// Exclude the root object and push nested objects, arrays, and leaves
 		if (currentPath) {
 			result.push([currentPath, currentObj]);
 		}
 
 		if (typeof currentObj === 'object' && currentObj !== null) {
 			if (Array.isArray(currentObj)) {
-				// If it's an array, iterate through the elements
 				currentObj.forEach((item, index) => {
 					recurse(item, `${currentPath}[${index}]`);
 				});
 			} else {
-				// If it's an object, iterate through its properties
 				for (const key in currentObj) {
 					if (currentObj.hasOwnProperty(key)) {
 						recurse(
@@ -39,7 +37,7 @@ export const getAllNestedKeyValuePairs = (obj: any): [string, any][] => {
 		}
 	}
 
-	recurse(obj, ''); // Start recursion with an empty string path for the root
+	recurse(obj, '');
 	return result;
 };
 
@@ -51,12 +49,91 @@ export const stringifyIfObj = (obj: any) => {
 };
 
 export const checkArrayTypes = (arr: any[]) => {
-	if (!Array.isArray(arr)) return 'string'; // Ensure input is an array
-
-	const firstType = typeof arr[0]; // Get the type of the first element
-
-	// Check if all elements have the same type
+	if (!Array.isArray(arr)) return 'string';
+	const firstType = typeof arr[0];
 	const allSameType = arr.every((item) => typeof item === firstType);
-
 	return allSameType ? firstType : 'string';
+};
+
+export const getAllVaultProperties = (
+	app: App | undefined
+): Record<string, never> => {
+	return (
+		app?.vault.getFiles().reduce((acc, file) => {
+			const props = app.metadataCache.getFileCache(file)?.frontmatter;
+			if (props) {
+				const nestedProps = getAllNestedKeyValuePairs(props).reduce(
+					(nestedAcc: any, [key, value]) => {
+						nestedAcc[`${file.path}/${key}`] = value;
+						return nestedAcc;
+					},
+					{}
+				);
+				Object.assign(acc, nestedProps);
+			}
+			return acc;
+		}, {}) ?? {}
+	);
+};
+
+export const findParentWithClass = (
+	element: HTMLElement,
+	className: string
+) => {
+	let parent = element.parentElement;
+	while (parent !== null) {
+		if (parent.classList.contains(className)) {
+			return parent;
+		}
+		parent = parent.parentElement;
+	}
+	return null;
+};
+
+export const trancateString = (str: string, maxLength: number): string => {
+	return str.length > 100 ? str.substring(0, maxLength) + '...' : str;
+};
+
+export const minimizeJsFunction = (multiLineFunction: string) => {
+	return multiLineFunction
+		.replace(/\s+/g, ' ')
+		.replace(/\s*{\s*/g, ' { ')
+		.replace(/\s*}\s*/g, ' } ')
+		.replace(/;\s*/, '; ')
+		.trim();
+};
+
+export const firstNElement = (arr: any[], n: number, defaultValue: any) => {
+	return arr
+		.slice(0, n)
+		.concat(Array(Math.max(n - arr.length, 0)).fill(defaultValue));
+};
+
+export function copyToClipboard(text: string) {
+	navigator.clipboard
+		.writeText(text)
+		.then(function () {
+			console.log('Text copied to clipboard');
+		})
+		.catch(function (error) {
+			console.error('Failed to copy text: ', error);
+		});
+}
+
+export const getArgNames = (funcStr: string) => {
+	const argsMatch = funcStr.match(/^\s*\(([^)]*)\)\s*=>/);
+
+	if (argsMatch && argsMatch[1].trim()) {
+		return argsMatch[1]
+			.split(',')
+			.map((arg) => arg.trim())
+			.filter((arg) => arg.length != 0);
+	}
+
+	const singleArgMatch = funcStr.match(/^\s*([^()\s]+)\s*=>/);
+	if (singleArgMatch) {
+		return [singleArgMatch[1].trim()].filter((arg) => arg.length != 0);
+	}
+
+	return [];
 };

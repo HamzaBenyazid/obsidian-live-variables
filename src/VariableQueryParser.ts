@@ -3,9 +3,10 @@ import {
 	assertListHasExactlyOneElement,
 	assertNoUndefinedElems,
 } from './assertions';
-import { checkArrayTypes, getValueByPath } from './utils';
+import { checkArrayTypes, getValueByPath, stringifyIfObj } from './utils';
 
 export const getVariableValue = (id: string, context: LiveVariablesContext) => {
+	if (id === '') return undefined;
 	const lastSlashIndex = id.lastIndexOf('/');
 	let variableId;
 	let variableFile;
@@ -15,11 +16,11 @@ export const getVariableValue = (id: string, context: LiveVariablesContext) => {
 	} else {
 		const filePath = id.substring(0, lastSlashIndex);
 		variableId = id.substring(lastSlashIndex + 1);
-		variableFile = context.app.vault.getFileByPath(filePath);
+		variableFile = context.app?.vault.getFileByPath(filePath);
 	}
 	if (variableFile) {
 		const value = getValueByPath(
-			context.app.metadataCache.getFileCache(variableFile)?.frontmatter,
+			context.app?.metadataCache.getFileCache(variableFile)?.frontmatter,
 			variableId
 		);
 		return value;
@@ -37,7 +38,7 @@ export interface VarQuery {
 }
 
 export interface LiveVariablesContext {
-	app: App;
+	app: App | undefined;
 	currentFile: TFile;
 }
 
@@ -63,25 +64,56 @@ export const parseQuery = (
 	}
 };
 
-export const parseArgs = (
-	func: string,
-	argsStr: string,
-): string[] => {
-	if(func !== Functions.JS_FUNC){
-		return argsStr.split(",").map((v) => v.trim());
-	}
-	const lambdaFuncRegex = /(.+),\s*func\s*=\s*(.+)/gm
-	const match = lambdaFuncRegex.exec(argsStr)
-	if(match){
-		const args = [] 
-		const lambdaFunc = match[2];
-		args.push(lambdaFunc, ...match[1].split(",").map((v) => v.trim()));
-		return args;
-	} else {
-		throw Error("parseArgs error")
+export const parseArgs = (func: string, argsStr: string): string[] => {
+	switch (func) {
+		case Functions.JS_FUNC:
+			return parseJsFuncArgs(argsStr);
+		case Functions.CODE_BLOCK:
+			return parseCodeBlockArgs(argsStr);
+		default:
+			return argsStr.split(',').map((v) => v.trim());
 	}
 };
 
+const parseJsFuncArgs = (argsStr: string): string[] => {
+	const lambdaFuncRegex = /(.*),\s*func\s*=\s*(.+)/gm;
+	const match = lambdaFuncRegex.exec(argsStr);
+	if (match) {
+		const args = [];
+		const lambdaFunc = match[2];
+		args.push(lambdaFunc);
+		if (match[1].length !== 0) {
+			args.push(...match[1].split(',').map((v) => v.trim()));
+		}
+		return args;
+	} else {
+		throw Error('parseArgs error');
+	}
+};
+
+const parseCodeBlockArgs = (argsStr: string): string[] => {
+	const re = /(.*),\s*code\s*=\s*(.+)/gm;
+	const match = re.exec(argsStr);
+	if (match) {
+		const args = [];
+		const codeBlock = match[2];
+		args.push(codeBlock);
+		if (match[1].length !== 0) {
+			args.push(...match[1].split(',').map((v) => v.trim()));
+		}
+		return args;
+	} else {
+		throw Error('parseArgs error');
+	}
+};
+
+export const computeValueFromQuery = (
+	query: string,
+	context: LiveVariablesContext
+) => {
+	const varQuery = parseQuery(query, context);
+	return computeValue(varQuery, context)
+};
 
 export const computeValue = (
 	varQuery: VarQuery,
@@ -94,6 +126,8 @@ export const computeValue = (
 			return getFunc(varQuery.args, context);
 		case Functions.JS_FUNC:
 			return customJsFunc(varQuery.args, context);
+		case Functions.CODE_BLOCK:
+			return codeBlockFunc(varQuery.args, context);
 	}
 };
 
@@ -102,6 +136,7 @@ enum Functions {
 	GET = 'get',
 	CONCAT = 'concat',
 	JS_FUNC = 'jsFunc',
+	CODE_BLOCK = 'codeBlock',
 }
 
 export const getFunc = (args: string[], context: LiveVariablesContext) => {
@@ -114,31 +149,54 @@ export const getFunc = (args: string[], context: LiveVariablesContext) => {
 		values,
 		"can't get multiple values, please specify only one value"
 	);
-	return values[1];
+	return values[0];
 };
 
 export const sumFunc = (args: string[], context: LiveVariablesContext) => {
 	const values = args.map((id) => getVariableValue(id, context));
 	const valueType = checkArrayTypes(values);
-	const neutralValues = {
-		string: '',
-		number: 0,
-	} as any;
-	if(neutralValues[valueType] === undefined){
-		throw Error(`cannot sum variables of type ${valueType}`)
-	}
-	return values.reduce((a, b) => a + b, neutralValues[valueType]);
+	const neutralValue = valueType === 'number' ? 0 : '';
+	return values.reduce(
+		(a, b) =>
+			valueType === 'number'
+				? a + b
+				: stringifyIfObj(a) + stringifyIfObj(b),
+		neutralValue
+	);
 };
 
 export const customJsFunc = (args: string[], context: LiveVariablesContext) => {
-	const lambdaStr = args[0];
-	const lambdaFunc = new Function('return ' + lambdaStr)();
-	const values = args.slice(1).map((id) => getVariableValue(id, context));
-	assertNoUndefinedElems(
-		values,
-		"Can't compute an undefined value, please make sure that all variable refrences are correctly set"
-	);
-	return lambdaFunc(...values);
+	try {
+		const lambdaStr = args[0];
+		const lambdaFunc = new Function('return ' + lambdaStr)();
+		const values = args.slice(1).map((id) => getVariableValue(id, context));
+		assertNoUndefinedElems(
+			values,
+			"Can't compute an undefined value, please make sure that all variable refrences are correctly set"
+		);
+		const computedValue = lambdaFunc(...values);
+		return computedValue;
+	} catch {
+		return undefined;
+	}
 };
 
-
+export const codeBlockFunc = (
+	args: string[],
+	context: LiveVariablesContext
+) => {
+	try {
+		let codeBlock = args[0];
+		const values = args.slice(1).map((id) => getVariableValue(id, context));
+		values.forEach((value) => {
+			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/g, value);
+		});
+		console.log("codeBlockFunc");
+		console.log(codeBlock);
+		const computedValue = `\n\`\`\`\n${codeBlock}\n\`\`\`\n`;
+		console.log(computedValue);
+		return computedValue;
+	} catch {
+		return undefined;
+	}
+};

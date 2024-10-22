@@ -6,3 +6,64 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.js-func-container {
+	margin-top: 10px; /* Add some spacing if needed */
+	height: auto; /* Adjust height */
+}
+.CodeMirror {
+	border: 1px solid var(--text-muted) !important;
+}
+.value-preview {
+	margin: 10px 0;
+}
+
+.query-modal-setting {
+	border: none;
+}
+
+.query-modal-setting-container {
+	border-bottom: solid;
+}
+
+
+.ant-dropdown-menu-item-selected .ant-dropdown-menu-title-content {
+    color: var(--color-purple);
+	font-weight: normal;
+	display: block;
+	min-height: 1.2em;
+	padding: 0px 2px 1px;
+	white-space: nowrap;
+}
+
+.ant-dropdown-menu-title-content:not(
+		.ant-dropdown-menu-item-selected .ant-dropdown-menu-title-content
+	) {
+	color: var(--text-normal);
+	font-weight: normal;
+	display: block;
+	min-height: 1.2em;
+	padding: 0px 2px 1px;
+	white-space: nowrap;
+}
+
+.query-modal-sub-setting-item-name {
+	font-size: var(--font-ui-small);
+}
+
+.query-modal-sub-setting-item .setting-item-name{
+	font-size: var(--font-ui-small);
+}
+
+.query-modal-sub-setting-item {
+	padding-left: 5px;
+	border-top: none;
+}
+
+.code-editor-container{
+	margin-top: 5px;
+}
+
+.query-modal-error{
+	color: var(--text-error);
+}

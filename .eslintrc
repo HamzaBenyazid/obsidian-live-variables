@@ -3,7 +3,8 @@
     "parser": "@typescript-eslint/parser",
     "env": { "node": true },
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "react"
     ],
     "extends": [
       "eslint:recommended",
@@ -11,9 +12,13 @@
       "plugin:@typescript-eslint/recommended"
     ], 
     "parserOptions": {
-        "sourceType": "module"
+        "sourceType": "module",
+        "ecmaFeatures": {
+          "jsx": true
+      }
     },
     "rules": {
+      "no-mixed-spaces-and-tabs":"off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
       "@typescript-eslint/ban-ts-comment": "off",

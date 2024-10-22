@@ -8,11 +8,21 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
+	"eslintConfig": {
+		"extends": [
+			"react-app",
+			"react-app/jest"
+		]
+	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@stylistic/eslint-plugin-js": "^2.8.0",
 		"@types/node": "^16.11.6",
+		"@types/prismjs": "^1.26.4",
+		"@types/react": "^18.3.11",
+		"@types/react-dom": "^18.3.0",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
@@ -20,5 +30,23 @@
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@ant-design/icons": "^5.5.1",
+		"@codemirror/basic-setup": "^0.20.0",
+		"@codemirror/lang-javascript": "^6.2.2",
+		"@codemirror/language": "^6.10.3",
+		"@codemirror/language-data": "^6.5.1",
+		"@codemirror/state": "^6.4.1",
+		"@codemirror/theme-one-dark": "^6.1.2",
+		"@codemirror/view": "^6.34.1",
+		"@remirror/extension-codemirror6": "^2.0.1",
+		"@uiw/react-codemirror": "^4.23.4",
+		"antd": "^5.21.2",
+		"codemirror": "^6.0.1",
+		"eslint-plugin-react": "^7.37.1",
+		"prismjs": "^1.29.0",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
 	}
 }

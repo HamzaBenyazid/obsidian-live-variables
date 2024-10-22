@@ -14,9 +14,22 @@ import {
 	getVariableValue,
 	parseQuery,
 } from './VariableQueryParser';
-import { getAllNestedKeyValuePairs, stringifyIfObj } from './utils';
+import {
+	getAllNestedKeyValuePairs,
+	getAllVaultProperties,
+	trancateString,
+	stringifyIfObj,
+} from './utils';
+import QueryModal from './QueryModal';
+import {
+	DEFAULT_SETTINGS,
+	LiveVariablesSettings,
+	LiveVariablesSettingTab,
+} from './LiveVariablesSettings';
 
 export default class LiveVariable extends Plugin {
+	public settings: LiveVariablesSettings;
+
 	propertyChanged = (
 		currentProperties: FrontMatterCache | undefined,
 		newProperties: FrontMatterCache | undefined
@@ -56,7 +69,7 @@ export default class LiveVariable extends Plugin {
 					false,
 					(property) => {
 						editor.replaceSelection(
-							`<span id="${property.key}"/>${property.value}<span type="end"/>`
+							`<span id="${property.key}"/>${property.value}<span type="end"/>\n`
 						);
 						new Notice(`Variable ${property.key} inserted`);
 					}
@@ -70,9 +83,23 @@ export default class LiveVariable extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(this.app, view, true, (property) => {
 					editor.replaceSelection(
-						`<span id="${property.key}"/>${property.value}<span type="end"/>`
+						`<span id="${property.key}"/>${property.value}<span type="end"/>\n`
 					);
 					new Notice(`Variable ${property.key} inserted`);
+				}).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'query-variables',
+			name: 'Query variables',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				new QueryModal(this.app, view, this, (query, value) => {
+					editor.replaceSelection(
+						`<span query="${query}"/>${value}<span type="end"/>\n`
+					);
+					if (view.file) this.renderVariables(view.file);
+					new Notice(`Query inserted`);
 				}).open();
 			},
 		});
@@ -97,6 +124,8 @@ export default class LiveVariable extends Plugin {
 				}
 			})
 		);
+
+		this.addSettingTab(new LiveVariablesSettingTab(this.app, this));
 	}
 
 	renderVariables(file: TFile) {
@@ -127,7 +156,7 @@ export default class LiveVariable extends Plugin {
 						)}<span type="end"/>`
 					);
 				} else {
-					throw Error(`Couldn't get value of variable ${key}`)
+					throw Error(`Couldn't get value of variable ${key}`);
 				}
 			});
 			return data;
@@ -136,7 +165,7 @@ export default class LiveVariable extends Plugin {
 
 	renderVariablesV2(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span query="(.+?)"/>.*?<span type="end"/>`,
+			String.raw`<span query="(.+?)"\/>[\s\S]*?<span type="end"\/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
@@ -148,7 +177,9 @@ export default class LiveVariable extends Plugin {
 				if (value) {
 					data = data.replace(
 						match[0],
-						`<span query="${query}"/>${stringifyIfObj(value)}<span type="end"/>`
+						`<span query="${query}"/>${stringifyIfObj(
+							value
+						)}<span type="end"/>`
 					);
 				}
 			});
@@ -158,9 +189,17 @@ export default class LiveVariable extends Plugin {
 
 	onunload() {}
 
-	async loadSettings() {}
+	async loadSettings() {
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
+	}
 
-	async saveSettings() {}
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
 }
 
 interface Property {
@@ -210,23 +249,7 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 	}
 
 	getGlobalSuggestions(query: string): Property[] {
-		const properties = Object.assign(
-			{},
-
-			...this.app.vault.getFiles().flatMap((file) => {
-				let props =
-					this.app.metadataCache.getFileCache(file)?.frontmatter;
-				if (props) {
-					props = Object.fromEntries(
-						getAllNestedKeyValuePairs(props).map(([k, v]) => [
-							file.path + '/' + k,
-							v,
-						])
-					);
-				}
-				return props;
-			})
-		);
+		const properties = getAllVaultProperties(this.app);
 		return Object.entries(properties)
 			.filter((property) =>
 				property[0].toLowerCase().includes(query.toLowerCase())
@@ -240,9 +263,7 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 	renderSuggestion(property: Property, el: HTMLElement) {
 		el.createEl('div', { text: property.key });
 		el.createEl('small', {
-			text:
-				property.value.substring(0, 100) +
-				(property.value.length > 100 ? '...' : ''),
+			text: trancateString(property.value, 100),
 		});
 	}
 
