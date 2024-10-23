@@ -1,4 +1,4 @@
-import { App, Modal, MarkdownView } from 'obsidian';
+import { App, Modal, MarkdownView, TFile } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 import { getAllVaultProperties } from './utils';
 import { createRoot, Root } from 'react-dom/client';
@@ -16,6 +16,7 @@ export default class QueryModal extends Modal {
 	codeMirrorEditor: EditorView | null = null;
 	funcOption = '';
 	view: MarkdownView;
+	file: TFile;
 	query = '';
 	value = '';
 	plugin: LiveVariable;
@@ -29,12 +30,15 @@ export default class QueryModal extends Modal {
 	) {
 		super(app);
 		this.view = view;
-		this.root = createRoot(this.contentEl);
-		this.variables = getAllVaultProperties(this.app);
-		this.plugin = plugin;
-		this.onSubmit = onSubmit;
-		this.setTitle('Query Variables');
-		this.renderReactForm();
+		if (view.file) {
+			this.file = view.file
+			this.root = createRoot(this.contentEl);
+			this.variables = getAllVaultProperties(this.app);
+			this.plugin = plugin;
+			this.onSubmit = onSubmit;
+			this.setTitle('Query Variables');
+			this.renderReactForm();
+		}
 	}
 
 	renderReactForm() {

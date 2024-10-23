@@ -6,6 +6,7 @@ import {
 	firstNElement,
 	getAllVaultProperties,
 	getArgNames,
+	getFileProperties,
 	minimizeJsFunction,
 	stringifyIfObj,
 	trancateString,
@@ -51,7 +52,10 @@ const defaultQueryFuncOptions: Record<string, FuncOption> = {
 
 const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 	const app = modal.app;
-	const variables = getAllVaultProperties(app);
+	const variables: Record<string, never> = {
+		...getFileProperties(modal.file, app),
+		...getAllVaultProperties(app),
+	};
 	const defaultQueryFunction = 'get';
 	const [queryFunc, setQueryFunc] = useState<string>(defaultQueryFunction);
 	const [vars, setVars] = useState<string[]>([]);
@@ -59,6 +63,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 	const [previewValue, setPreviewValue] = useState<string>('No valid value');
 	const [functionArgs, setFunctionArgs] = useState<string[]>([]);
 	const [codeBlockArgs, setCodeBlockArgs] = useState<string[]>([]);
+	const [codeBlockLang, setCodeBlockLang] = useState<string>('');
 	const [queryFuncOptions, setQueryFuncOptions] = useState<
 		Record<string, FuncOption>
 	>(defaultQueryFuncOptions);
@@ -68,6 +73,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 	const [codeBlockText, setCodeBlockText] = useState<string>('');
 	const [codeError, setCodeError] = useState<string | undefined>(undefined);
 	const [argsError, setArgsError] = useState<string | undefined>(undefined);
+	const [visibleArgsError, setVisibleArgsError] = useState<boolean>(false);
 	const gptPrompt = `Please write me a lambda function in javascript that {{what should the function do}}, the format should be like : 
 	\`\`\`
 		(a, b) => {
@@ -76,8 +82,8 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 	\`\`\``;
 	const [saveFunctionChecked, setSaveFunctionChecked] =
 		useState<boolean>(false);
-
 	const [functionName, setFunctionName] = useState<string>('');
+	const [query, setQuery] = useState<string>('');
 
 	const saveFunction = () => {
 		const settings: LiveVariablesSettings = modal.plugin.settings;
@@ -95,8 +101,6 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		});
 		modal.plugin.saveData(settings);
 	};
-
-	const [query, setQuery] = useState<string>('');
 
 	const valideFunctionCode = useCallback(() => {
 		try {
@@ -121,6 +125,15 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		return queryFuncOptions[queryFunc].code ?? false;
 	}, [queryFunc, queryFuncOptions]);
 
+	const valideArg = (arg: string): boolean => {
+		if (variables[arg] === undefined) {
+			console.log('invalid arg');
+			setArgsError(`variable ${arg} not found`);
+			return false;
+		}
+		return true;
+	};
+
 	const valideArgs = useCallback(() => {
 		const exactSize = isCustomFunction()
 			? functionArgs.length
@@ -131,7 +144,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		const maxSize = queryFuncOptions[queryFunc].maxArgsSize;
 		if (vars.some((v) => v.length === 0)) return false;
 		if (exactSize && vars.length === exactSize) {
-			return true;
+			return vars.every(valideArg);
 		}
 		if (
 			minSize &&
@@ -139,13 +152,13 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 			vars.length < maxSize &&
 			vars.length >= minSize
 		) {
-			return true;
+			return vars.every(valideArg);
 		}
 		if (minSize && vars.length >= minSize) {
-			return true;
+			return vars.every(valideArg);
 		}
 		if (!maxSize && !minSize && !exactSize) {
-			return true;
+			return vars.every(valideArg);
 		}
 		return false;
 	}, [queryFuncOptions, functionArgs, queryFunc, vars]);
@@ -183,55 +196,30 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 			setValue(undefined);
 			return;
 		}
-		const file = modal.view.file;
+		const file = modal.file;
 		if (isCustomFunction() && valideFunctionCode()) {
 			const query = `jsFunc(${vars}, func = ${minimizeJsFunction(
 				functionCode
 			)})`;
 			setQuery(query);
-			if (file) {
-				const context = { currentFile: file, app };
-				setValue(computeValueFromQuery(query, context));
-			}
+			const context = { currentFile: file, app };
+			setValue(computeValueFromQuery(query, context));
 		} else if (queryFunc === 'codeBlock') {
-			const query = `codeBlock(${vars}, code = ${codeBlockText})`;
+			const query = `codeBlock(${vars}, code = ${codeBlockText}, lang = ${codeBlockLang})`;
 			setQuery(query);
-			if (file) {
-				const context = { currentFile: file, app };
-				setValue(computeValueFromQuery(query, context));
-			}
+			const context = { currentFile: file, app };
+			setValue(computeValueFromQuery(query, context));
 		} else if (!isCustomFunction()) {
 			const query = `${queryFunc}(${vars})`;
 			setQuery(query);
-			if (file) {
-				const context = { currentFile: file, app };
-				setValue(computeValueFromQuery(query, context));
-			}
+			const context = { currentFile: file, app };
+			setValue(computeValueFromQuery(query, context));
 		} else {
 			setValue(undefined);
 		}
 	}, [queryFunc, vars, functionCode, codeBlockText]);
 
-	useEffect(() => {
-		computeValue();
-	}, [queryFunc, vars, functionCode]);
-
-	useEffect(() => {
-		setFunctionArgs(getArgNames(functionCode));
-		valideFunctionCode();
-	}, [functionCode]);
-
-	useEffect(() => {
-		if (queryFunc === 'codeBlock') {
-			const codeBlockArgsPattern = /\{\{(.+?)\}\}/g;
-			const matches = [
-				...codeBlockText.matchAll(codeBlockArgsPattern),
-			].map((match) => match[1]);
-			setCodeBlockArgs(matches);
-		}
-	}, [codeBlockText, queryFunc]);
-
-	useEffect(() => {
+	const updateVarsSize = () => {
 		if (isSavedCustomFunction() && queryFuncOptions[queryFunc].code) {
 			setFunctionCode(queryFuncOptions[queryFunc].code);
 		}
@@ -253,6 +241,34 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		} else if ((maxSize || maxSize === 0) && vars.length > maxSize) {
 			setVars(firstNElement(vars, maxSize, defaultValue));
 		}
+	};
+
+	const parseCodeBlockArgs = () => {
+		const codeBlockArgsPattern = /\{\{(.+?)\}\}/g;
+		const matches = [...codeBlockText.matchAll(codeBlockArgsPattern)].map(
+			(match) => match[1]
+		);
+		setCodeBlockArgs(matches);
+	};
+
+	useEffect(() => {
+		setVisibleArgsError(false);
+		computeValue();
+	}, [queryFunc, vars, functionCode]);
+
+	useEffect(() => {
+		setFunctionArgs(getArgNames(functionCode));
+		valideFunctionCode();
+	}, [functionCode]);
+
+	useEffect(() => {
+		if (queryFunc === 'codeBlock') {
+			parseCodeBlockArgs();
+		}
+	}, [codeBlockText, queryFunc]);
+
+	useEffect(() => {
+		updateVarsSize();
 	}, [queryFunc, functionArgs, codeBlockArgs, codeBlockText]);
 
 	useEffect(() => {
@@ -305,6 +321,17 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 						<div className="setting-item-name query-modal-sub-setting-item-name">
 							Code Block
 						</div>
+						<Setting
+							className="query-modal-sub-setting-item"
+							name="Code language"
+						>
+							<Setting.Text
+								placeHolder="code language"
+								onChange={(e) => {
+									setCodeBlockLang(e.target.value);
+								}}
+							/>
+						</Setting>
 						<div className="code-editor-container">
 							<CodeEditor
 								value={codeBlockText}
@@ -403,10 +430,10 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 						key={index + 1}
 						name={
 							isCustomFunction()
-								? queryFunc === 'codeBlock'
-									? `Variable: ${codeBlockArgs[index]}`
-									: `Variable: ${functionArgs[index]}`
-								: `Variable ${index + 1}`
+								? `Variable ${functionArgs[index]}`
+								: queryFunc === 'codeBlock'
+								? `Variable: ${codeBlockArgs[index]}`
+								: `Variable: ${index + 1}`
 						}
 						desc={`preview value: ${
 							variables[varName]
@@ -440,7 +467,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 					</Setting>
 				);
 			})}
-			{argsError && (
+			{argsError && visibleArgsError && (
 				<div className="setting-item-description query-modal-error">
 					{argsError}
 				</div>
@@ -454,13 +481,12 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 				<Setting.Button
 					cta
 					onClick={(e) => {
-						console.log(`valide code: ${valideFunctionCode()}`);
 						if (!valideFunctionCode()) {
 							setCodeError('code error');
 							return;
 						}
 						if (!valideArgs()) {
-							setArgsError('args error');
+							setVisibleArgsError(true);
 							return;
 						}
 						modal.close();

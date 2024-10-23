@@ -47,13 +47,12 @@ export const parseQuery = (
 	context: LiveVariablesContext
 ): VarQuery => {
 	const re = new RegExp(
-		String.raw`(${getSupportedFunctions().join('|')})\((.*)\)`,
+		String.raw`(${getSupportedFunctions().join('|')})\(([\s\S]*)\)`,
 		'g'
 	);
 	const match = re.exec(query);
 	if (match) {
 		const func = match[1] as Functions;
-		// jsFunc((x, y) => x+y+1, x, y)
 		const args = parseArgs(func, match[2]);
 		return {
 			func,
@@ -76,7 +75,7 @@ export const parseArgs = (func: string, argsStr: string): string[] => {
 };
 
 const parseJsFuncArgs = (argsStr: string): string[] => {
-	const lambdaFuncRegex = /(.*),\s*func\s*=\s*(.+)/gm;
+	const lambdaFuncRegex = /(.*),\s*func\s*=\s*(.+)\s*/gm;
 	const match = lambdaFuncRegex.exec(argsStr);
 	if (match) {
 		const args = [];
@@ -92,12 +91,13 @@ const parseJsFuncArgs = (argsStr: string): string[] => {
 };
 
 const parseCodeBlockArgs = (argsStr: string): string[] => {
-	const re = /(.*),\s*code\s*=\s*(.+)/gm;
+	const re = /(.*),\s*code\s*=\s*([\s\S]*)\s*,\s*lang\s*=\s*(.+)\s*/gm;
 	const match = re.exec(argsStr);
 	if (match) {
 		const args = [];
 		const codeBlock = match[2];
-		args.push(codeBlock);
+		const lang = match[3];
+		args.push(codeBlock, lang);
 		if (match[1].length !== 0) {
 			args.push(...match[1].split(',').map((v) => v.trim()));
 		}
@@ -187,13 +187,15 @@ export const codeBlockFunc = (
 ) => {
 	try {
 		let codeBlock = args[0];
-		const values = args.slice(1).map((id) => getVariableValue(id, context));
+		const lang = args[1];
+		const values = args.slice(2).map((id) => getVariableValue(id, context));
+		console.log(values)
 		values.forEach((value) => {
 			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/g, value);
 		});
 		console.log("codeBlockFunc");
 		console.log(codeBlock);
-		const computedValue = `\n\`\`\`\n${codeBlock}\n\`\`\`\n`;
+		const computedValue = `\n\`\`\`${lang}\n${codeBlock}\n\`\`\`\n`;
 		console.log(computedValue);
 		return computedValue;
 	} catch {

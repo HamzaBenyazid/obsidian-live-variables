@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 
 export const getValueByPath = (obj: any, path: string): any => {
 	const keys = path.split(/\.|\[|\]/).filter(Boolean);
@@ -63,7 +63,7 @@ export const getAllVaultProperties = (
 			const props = app.metadataCache.getFileCache(file)?.frontmatter;
 			if (props) {
 				const nestedProps = getAllNestedKeyValuePairs(props).reduce(
-					(nestedAcc: any, [key, value]) => {
+					(nestedAcc: Record<string, never>, [key, value]:[string, never]) => {
 						nestedAcc[`${file.path}/${key}`] = value;
 						return nestedAcc;
 					},
@@ -74,6 +74,28 @@ export const getAllVaultProperties = (
 			return acc;
 		}, {}) ?? {}
 	);
+};
+
+export const getFileProperties = (
+	file: TFile | null,
+	app: App | undefined
+): Record<string, never> => {
+	if (!app || !file) return {};
+	const props = app.metadataCache.getFileCache(file)?.frontmatter;
+	if (props) {
+		const nestedProps = getAllNestedKeyValuePairs(props).reduce(
+			(
+				nestedAcc: Record<string, never>,
+				[key, value]: [string, never]
+			) => {
+				nestedAcc[key] = value;
+				return nestedAcc;
+			},
+			{}
+		);
+		return nestedProps;
+	}
+	return {};
 };
 
 export const findParentWithClass = (
