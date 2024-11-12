@@ -69,7 +69,7 @@ export default class LiveVariable extends Plugin {
 					false,
 					(property) => {
 						editor.replaceSelection(
-							`<span id="${property.key}"/>${property.value}<span type="end"/>\n`
+							`<span query="get(${property.key})"/>${property.value}<span type="end"/>\n`
 						);
 						new Notice(`Variable ${property.key} inserted`);
 					}
@@ -83,7 +83,7 @@ export default class LiveVariable extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(this.app, view, true, (property) => {
 					editor.replaceSelection(
-						`<span id="${property.key}"/>${property.value}<span type="end"/>\n`
+						`<span query="get(${property.key})"/>${property.value}<span type="end"/>\n`
 					);
 					new Notice(`Variable ${property.key} inserted`);
 				}).open();

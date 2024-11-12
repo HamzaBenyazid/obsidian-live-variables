@@ -189,14 +189,10 @@ export const codeBlockFunc = (
 		let codeBlock = args[0];
 		const lang = args[1];
 		const values = args.slice(2).map((id) => getVariableValue(id, context));
-		console.log(values)
 		values.forEach((value) => {
-			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/g, value);
+			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/, value);
 		});
-		console.log("codeBlockFunc");
-		console.log(codeBlock);
 		const computedValue = `\n\`\`\`${lang}\n${codeBlock}\n\`\`\`\n`;
-		console.log(computedValue);
 		return computedValue;
 	} catch {
 		return undefined;
