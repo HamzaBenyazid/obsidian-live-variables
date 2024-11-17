@@ -174,7 +174,7 @@ export default class LiveVariable extends Plugin {
 				const context = { currentFile: file, app: this.app };
 				const varQuery: VarQuery = parseQuery(query, context);
 				const value = computeValue(varQuery, context);
-				if (value) {
+				if (value !== undefined) {
 					data = data.replace(
 						match[0],
 						`<span query="${query}"/>${stringifyIfObj(

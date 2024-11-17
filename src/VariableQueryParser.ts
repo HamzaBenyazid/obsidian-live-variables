@@ -23,7 +23,7 @@ export const getVariableValue = (id: string, context: LiveVariablesContext) => {
 			context.app?.metadataCache.getFileCache(variableFile)?.frontmatter,
 			variableId
 		);
-		return value;
+		return value !== null ? value : '';
 	}
 	return undefined;
 };
@@ -112,7 +112,7 @@ export const computeValueFromQuery = (
 	context: LiveVariablesContext
 ) => {
 	const varQuery = parseQuery(query, context);
-	return computeValue(varQuery, context)
+	return computeValue(varQuery, context);
 };
 
 export const computeValue = (

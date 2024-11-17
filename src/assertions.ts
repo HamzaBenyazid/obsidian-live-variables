@@ -3,7 +3,7 @@ export const assertNoUndefinedElems = (
 	error = "assertNoUndefinedValues error"
 ) => {
 	values.map((val) => {
-		if (!val) {
+		if (val === undefined) {
 			throw Error(error);
 		}
 		return val;
