@@ -165,7 +165,7 @@ export default class LiveVariable extends Plugin {
 
 	renderVariablesV2(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span query="(.+?)"\/>[\s\S]*?<span type="end"\/>`,
+			String.raw`<span query="([\s\S]+?)"\/>[\s\S]*?<span type="end"\/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
