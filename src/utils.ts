@@ -63,7 +63,10 @@ export const getAllVaultProperties = (
 			const props = app.metadataCache.getFileCache(file)?.frontmatter;
 			if (props) {
 				const nestedProps = getAllNestedKeyValuePairs(props).reduce(
-					(nestedAcc: Record<string, never>, [key, value]:[string, never]) => {
+					(
+						nestedAcc: Record<string, never>,
+						[key, value]: [string, never]
+					) => {
 						nestedAcc[`${file.path}/${key}`] = value;
 						return nestedAcc;
 					},
@@ -158,4 +161,12 @@ export const getArgNames = (funcStr: string) => {
 	}
 
 	return [];
+};
+
+export const htmlEscapeNewLine = (text: string) => {
+	return text.replaceAll('\n', '&#10;');
+};
+
+export const getNewLinesFromHtmlEscaping = (htmlEscapedText: string) => {
+	return htmlEscapedText.replaceAll('&#10;', '\n');
 };

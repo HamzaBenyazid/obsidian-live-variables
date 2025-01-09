@@ -19,6 +19,8 @@ import {
 	getAllVaultProperties,
 	trancateString,
 	stringifyIfObj,
+	htmlEscapeNewLine,
+	getNewLinesFromHtmlEscaping,
 } from './utils';
 import QueryModal from './QueryModal';
 import {
@@ -96,7 +98,7 @@ export default class LiveVariable extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new QueryModal(this.app, view, this, (query, value) => {
 					editor.replaceSelection(
-						`<span query="${query}"/>${value}<span type="end"/>\n`
+						`<span query="${htmlEscapeNewLine(query)}"></span>${value}<span type="end"></span>\n`
 					);
 					if (view.file) this.renderVariables(view.file);
 					new Notice(`Query inserted`);
@@ -131,6 +133,7 @@ export default class LiveVariable extends Plugin {
 	renderVariables(file: TFile) {
 		this.renderVariablesV1(file);
 		this.renderVariablesV2(file);
+		this.renderVariablesV3(file);
 	}
 
 	/**
@@ -151,9 +154,9 @@ export default class LiveVariable extends Plugin {
 				if (value) {
 					data = data.replace(
 						match[0],
-						`<span query="get(${key})"/>${stringifyIfObj(
+						`<span query="get(${key})"></span>${stringifyIfObj(
 							value
-						)}<span type="end"/>`
+						)}<span type="end"></span>`
 					);
 				} else {
 					throw Error(`Couldn't get value of variable ${key}`);
@@ -165,21 +168,45 @@ export default class LiveVariable extends Plugin {
 
 	renderVariablesV2(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span query="([\s\S]+?)"\/>[\s\S]*?<span type="end"\/>`,
+			String.raw`<span query="([\s\S]+?)"\/>[\s\S]*?<span type="end"/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-				const query = match[1];
+				const query = getNewLinesFromHtmlEscaping(match[1]);
 				const context = { currentFile: file, app: this.app };
 				const varQuery: VarQuery = parseQuery(query, context);
 				const value = computeValue(varQuery, context);
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
-						`<span query="${query}"/>${stringifyIfObj(
+						`<span query="${htmlEscapeNewLine(query)}"></span>${stringifyIfObj(
 							value
-						)}<span type="end"/>`
+						)}<span type="end"></span>`
+					);
+				}
+			});
+			return data;
+		});
+	}
+
+	renderVariablesV3(file: TFile) {
+		const re = new RegExp(
+			String.raw`<span query="([\s\S]+?)"><\/span>[\s\S]*?<span type="end"><\/span>`,
+			'g'
+		);
+		this.app.vault.process(file, (data) => {
+			[...data.matchAll(re)].forEach((match) => {
+				const query = getNewLinesFromHtmlEscaping(match[1]);
+				const context = { currentFile: file, app: this.app };
+				const varQuery: VarQuery = parseQuery(query, context);
+				const value = computeValue(varQuery, context);
+				if (value !== undefined) {
+					data = data.replace(
+						match[0],
+						`<span query="${htmlEscapeNewLine(query)}"></span>${stringifyIfObj(
+							value
+						)}<span type="end"></span>`
 					);
 				}
 			});
