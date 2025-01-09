@@ -58,7 +58,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 	};
 	const defaultQueryFunction = 'get';
 	const [queryFunc, setQueryFunc] = useState<string>(defaultQueryFunction);
-	const [vars, setVars] = useState<string[]>([]);
+	const [vars, setVars] = useState<[string, string][]>([]);
 	const [value, setValue] = useState<string | undefined>(undefined);
 	const [previewValue, setPreviewValue] = useState<string>('No valid value');
 	const [functionArgs, setFunctionArgs] = useState<string[]>([]);
@@ -125,10 +125,10 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		return queryFuncOptions[queryFunc].code ?? false;
 	}, [queryFunc, queryFuncOptions]);
 
-	const valideArg = (arg: string): boolean => {
-		if (variables[arg] === undefined) {
+	const valideArg = ([name, val]: [string, string]): boolean => {
+		if (variables[val] === undefined) {
 			console.log('invalid arg');
-			setArgsError(`variable ${arg} not found`);
+			setArgsError(`variable ${val} not found`);
 			return false;
 		}
 		return true;
@@ -138,11 +138,11 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		const exactSize = isCustomFunction()
 			? functionArgs.length
 			: queryFunc === 'codeBlock'
-			? codeBlockArgs.length
+			? Array.from(new Set(codeBlockArgs)).length
 			: queryFuncOptions[queryFunc].exactArgsSize;
 		const minSize = queryFuncOptions[queryFunc].minArgsSize;
 		const maxSize = queryFuncOptions[queryFunc].maxArgsSize;
-		if (vars.some((v) => v.length === 0)) return false;
+		if (vars.some((v) => v[1].length === 0)) return false;
 		if (exactSize && vars.length === exactSize) {
 			return vars.every(valideArg);
 		}
@@ -167,7 +167,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		const exactSize = isCustomFunction()
 			? functionArgs.length
 			: queryFunc === 'codeBlock'
-			? codeBlockArgs.length
+			? Array.from(new Set(codeBlockArgs)).length
 			: queryFuncOptions[queryFunc].exactArgsSize;
 		const maxSize = queryFuncOptions[queryFunc].maxArgsSize;
 		return (
@@ -198,19 +198,21 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		}
 		const file = modal.file;
 		if (isCustomFunction() && valideFunctionCode()) {
-			const query = `jsFunc(${vars}, func = ${minimizeJsFunction(
-				functionCode
-			)})`;
+			const query = `jsFunc(${vars.map(
+				(it) => it[1]
+			)}, func = ${minimizeJsFunction(functionCode)})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
 			setValue(computeValueFromQuery(query, context));
 		} else if (queryFunc === 'codeBlock') {
-			const query = `codeBlock(${vars}, code = ${codeBlockText}, lang = ${codeBlockLang})`;
+			const query = `codeBlock(${codeBlockArgs.map(
+				(arg) => Object.fromEntries(vars)[arg]
+			)}, code = ${codeBlockText}, lang = ${codeBlockLang})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
 			setValue(computeValueFromQuery(query, context));
 		} else if (!isCustomFunction()) {
-			const query = `${queryFunc}(${vars})`;
+			const query = `${queryFunc}(${vars.map((it) => it[1])})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
 			setValue(computeValueFromQuery(query, context));
@@ -219,6 +221,21 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		}
 	}, [queryFunc, vars, functionCode, codeBlockText]);
 
+	const updateCodeBlockVarsSize = () => {
+		if (queryFunc === 'codeBlock') {
+			const newVars = vars.filter(([name, val]) =>
+				codeBlockArgs.contains(name)
+			); // delete vars that are not in args
+			codeBlockArgs.forEach((arg) => {
+				if (!newVars.map((it) => it[0]).contains(arg)) {
+					newVars.push([arg, '']);
+				}
+			}); // add new args
+			setVars(newVars);
+			console.log('updateCodeBlockVarsSize', vars);
+		}
+	};
+
 	const updateVarsSize = () => {
 		if (isSavedCustomFunction() && queryFuncOptions[queryFunc].code) {
 			setFunctionCode(queryFuncOptions[queryFunc].code);
@@ -226,12 +243,10 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 		console.log(queryFunc);
 		const exactSize = isCustomFunction()
 			? functionArgs.length
-			: queryFunc === 'codeBlock'
-			? codeBlockArgs.length
 			: queryFuncOptions[queryFunc].exactArgsSize;
 		const minSize = queryFuncOptions[queryFunc].minArgsSize;
 		const maxSize = queryFuncOptions[queryFunc].maxArgsSize;
-		const defaultValue = '';
+		const defaultValue = ['', ''];
 		console.log(exactSize);
 		if (exactSize || exactSize === 0) {
 			console.log('here');
@@ -269,7 +284,11 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 
 	useEffect(() => {
 		updateVarsSize();
-	}, [queryFunc, functionArgs, codeBlockArgs, codeBlockText]);
+	}, [queryFunc, functionArgs]);
+
+	useEffect(() => {
+		updateCodeBlockVarsSize();
+	}, [codeBlockArgs, codeBlockText]);
 
 	useEffect(() => {
 		modal.plugin.loadSettings();
@@ -415,7 +434,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 					{addableArg() && (
 						<Setting.Button
 							onClick={(e) => {
-								setVars([...vars, '']);
+								setVars([...vars, ['', '']]);
 							}}
 						>
 							Add Argument
@@ -423,7 +442,9 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 					)}
 				</Setting>
 			)}
-			{vars.map((varName, index) => {
+			{vars.map(([name, val], index) => {
+				console.log(vars);
+				console.log(queryFunc);
 				return (
 					<Setting
 						className="query-modal-sub-setting-item"
@@ -432,13 +453,13 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 							isCustomFunction()
 								? `Variable ${functionArgs[index]}`
 								: queryFunc === 'codeBlock'
-								? `Variable: ${codeBlockArgs[index]}`
+								? `Variable: ${name}`
 								: `Variable: ${index + 1}`
 						}
 						desc={`preview value: ${
-							variables[varName]
+							variables[val]
 								? trancateString(
-										stringifyIfObj(variables[varName]),
+										stringifyIfObj(variables[val]),
 										50
 								  )
 								: 'no value'
@@ -449,7 +470,8 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 							placeHolder={`Enter argument ${index + 1}`}
 							onChange={(value) => {
 								const newVars = [...vars];
-								newVars[index] = value;
+								newVars[index][0] = name;
+								newVars[index][1] = value;
 								setVars(newVars);
 							}}
 						/>
@@ -481,6 +503,8 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({ modal }) => {
 				<Setting.Button
 					cta
 					onClick={(e) => {
+						console.log('valideFunctionCode', valideFunctionCode());
+						console.log('valideArgs', valideArgs());
 						if (!valideFunctionCode()) {
 							setCodeError('code error');
 							return;
