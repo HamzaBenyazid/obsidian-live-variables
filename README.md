@@ -1,13 +1,85 @@
-# Obsidian Live Variables Plugin
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/161c80a9-a1fa-427c-9861-a06552527387" width="100%" alt="Banner">
 
-The Live Variables Plugin for Obsidian allows you to manage and reuse data across your notes by defining variables in the note’s properties. When a variable is updated, all instances of that variable in your note are automatically synchronized, ensuring consistency and saving time when dealing with frequently changing information.
+# v2.0.0 is out!
+</div>
+<p align="center">
+  <a href="https://github.com/Mahmud0808/Iconify/releases"><img src="https://img.shields.io/github/downloads/HamzaBenyazid/obsidian-live-variables/total?color=%233DDC84&logo=github&logoColor=%23fff&style=for-the-badge" alt="Downloads"></a>
+</p>
 
-## Features
-- **Dynamic Variable Management**: Easily define and update variables within your note’s properties. Any change to a variable will automatically reflect throughout the note.
-- **Cross-Note Variable Reuse**: Access and reuse variables from other notes within your vault.
-- **Seamless Integration**: Fully integrated into Obsidian, enhancing your workflow without disrupting your note-taking experience.
-- **Efficiency Boost**: Reduce manual updates for repetitive information across notes.
-- **User-Friendly Interface**: Intuitive setup and management of variables with minimal effort.
+**Supercharge your notes with dynamic data!** The Live Variables Plugin v2 revolutionizes how you manage information in Obsidian. Define variables once, reuse them everywhere, and watch your notes auto-update—now with powerful code blocks, smart queries, and an intuitive form interface.
+
+[![Sponsor this project](https://img.shields.io/badge/Sponsor-%E2%9D%A4-red?logo=github)](https://github.com/sponsors/HamzaBenyazid)  
+*Love this plugin? Help keep it alive! [Sponsor development →](https://github.com/sponsors/HamzaBenyazid)*
+
+Your sponsorship helps:
+ - Fund critical updates and bug fixes
+ - Prioritize feature requests from sponsors
+ - Keep the plugin free for everyone
+
+---
+### Table of Contents
+**[Features](#-features)**<br>
+**[What's New in v2?](#-whats-new-in-v2)**<br>
+**[Demo](#-demo)**<br>
+**[Contributing](#-contributing)**<br>
+**[License](#-contributing)**<br>
+
+---
+
+
+## 🚀 Features  
+- **Dynamic Variables**: Define in frontmatter, update everywhere instantly.  
+- **Code Block Magic**: Execute queries & transform data using code blocks.  
+- **Smart Query Engine**:  
+  - Built-in functions
+  - Custom JavaScript execution
+- **Custom Function Library**: Save frequent scripts (e.g., calculateTax) and call them by name!
+- **Form Interface**: Insert queries visually—no coding skills needed!  
+- **Cross-Note Sync**: Share variables across your entire vault.  
+
+---
+
+## 🎬 What's New in v2?  
+### Code Block Support
+
+https://github.com/user-attachments/assets/9e064696-f99a-4d9e-af4e-dc2f749ec569
+
+### Smart Query Engine
+- Build-in functions (SUM):
+
+https://github.com/user-attachments/assets/a72f7e87-64ea-454b-ad91-10daff7588c9
+
+- Custom JavaScript Quries:
+  	- Used Examples
+  		- A/B Testing Content
+		```js
+		() => {
+		  return Math.random() > 0.5 ? "New UI" : "Legacy UI";
+		}
+		```
+  		- Dynamic Checklists 
+		```js
+		(tasks) => { 
+			const done = tasks.filter(t => t.completed).length; 
+			const doneBar = '▣'.repeat(done); 
+			const undoneBar = '□'.repeat(tasks.length - done); 
+			const completionPercentage = Math.round((done / tasks.length) * 100);
+			return doneBar + undoneBar + ' (' + completionPercentage +'% completed)'; 
+		}
+		```
+	- **Demo**:
+
+https://github.com/user-attachments/assets/979e4361-64b8-4d66-8f36-74d6fa1370df  
+
+- Custom Fucntion Library:
+
+https://github.com/user-attachments/assets/5affac22-1b86-4bf8-9993-15b9b023e4e8
+
+- User friendly form for inserting queries: 
+The form adds the arguments input dynamically and allows you the prview values of each argument and the value of the resulting query.
+<img width="560" alt="query-form" src="https://github.com/user-attachments/assets/ebfe1a8c-5d62-47e3-bc6f-02cf565d5ef0" />
+
 
 ## Getting Started
 
@@ -28,17 +100,19 @@ The Live Variables Plugin for Obsidian allows you to manage and reuse data acros
    You can insert variables using the following options:
    - **Local Variables**: Insert a variable defined within the current note by using the command: `Live Variables: Insert local variable`.
    - **Vault-Wide Variables**: Insert a variable defined in any note within the vault by using the command: `Live Variables: Insert variable from another note`.
+   - **Query variables**: Insert a live code blocks, live custom js function and your saved function by using command: `Live Variables: Query variables`.
 
 4. **Update Variables**:
    - Modify the value of a variable in the note’s properties, and all references to that variable across your vault will be updated instantly.
-
-## Demo
-Check out the plugin in action with this demo:
+  
+## 🎥 Demo
+Check out this quick demo of all of plugin's features in action:
 
 ![Demo](demo/demo.gif)
 
-## Contributing
+## 🤝 Contributing
 We welcome contributions! If you have suggestions for improvements or new features, feel free to open an issue or submit a pull request.
 
-## License
+## 📜 License
 This project is licensed under the MIT License.
+
