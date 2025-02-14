@@ -108,7 +108,7 @@ The form adds the arguments input dynamically and allows you the prview values o
 ## 🎥 Demo
 Check out this quick demo of all of plugin's features in action:
 
-![Demo](demo/demo.gif)
+https://github.com/user-attachments/assets/70361e83-5b84-4029-a7e9-e0e640e216d1
 
 ## 🤝 Contributing
 We welcome contributions! If you have suggestions for improvements or new features, feel free to open an issue or submit a pull request.
