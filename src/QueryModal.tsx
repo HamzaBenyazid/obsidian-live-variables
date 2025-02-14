@@ -26,15 +26,17 @@ export default class QueryModal extends Modal {
 		app: App,
 		view: MarkdownView,
 		plugin: LiveVariable,
+		query: string,
 		onSubmit: (query: string, value: string) => void
 	) {
 		super(app);
 		this.view = view;
 		if (view.file) {
-			this.file = view.file
+			this.file = view.file;
 			this.root = createRoot(this.contentEl);
 			this.variables = getAllVaultProperties(this.app);
 			this.plugin = plugin;
+			this.query = query;
 			this.onSubmit = onSubmit;
 			this.setTitle('Query Variables');
 			this.renderReactForm();
@@ -42,6 +44,6 @@ export default class QueryModal extends Modal {
 	}
 
 	renderReactForm() {
-		this.root?.render(<QueryModalForm modal={this} />);
+		this.root?.render(<QueryModalForm modal={this} initQuery={this.query} file={this.file}/>);
 	}
 }

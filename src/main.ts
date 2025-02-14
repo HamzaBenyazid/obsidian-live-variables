@@ -71,7 +71,7 @@ export default class LiveVariable extends Plugin {
 					false,
 					(property) => {
 						editor.replaceSelection(
-							`<span query="get(${property.key})"/>${property.value}<span type="end"/>\n`
+							`<span query="get(${property.key})"></span>${property.value}<span type="end"></span>\n`
 						);
 						new Notice(`Variable ${property.key} inserted`);
 					}
@@ -85,7 +85,7 @@ export default class LiveVariable extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new PropertySelectionModal(this.app, view, true, (property) => {
 					editor.replaceSelection(
-						`<span query="get(${property.key})"/>${property.value}<span type="end"/>\n`
+						`<span query="get(${property.key})"></span>${property.value}<span type="end"></span>\n`
 					);
 					new Notice(`Variable ${property.key} inserted`);
 				}).open();
@@ -96,9 +96,29 @@ export default class LiveVariable extends Plugin {
 			id: 'query-variables',
 			name: 'Query variables',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				new QueryModal(this.app, view, this, (query, value) => {
+				const re = new RegExp(
+					String.raw`<span query="([\s\S]+?)"><\/span>`,
+					'g'
+				);
+				const editorPosition = editor.getCursor();
+				const lines = editor.getValue().split('\n');
+				let query = '';
+
+				// Traverse lines above the cursor to find the opening backticks
+				for (let i = editorPosition.line; i >= 0; i--) {
+					if (lines[i].contains('<span type="end"></span>')) {
+						break;
+					}
+					const match = re.exec(lines[i]);
+					if (match) {
+						query = getNewLinesFromHtmlEscaping(match[1]);
+					}
+				}
+				new QueryModal(this.app, view, this, query, (query, value) => {
 					editor.replaceSelection(
-						`<span query="${htmlEscapeNewLine(query)}"></span>${value}<span type="end"></span>\n`
+						`<span query="${htmlEscapeNewLine(
+							query
+						)}"></span>${value}<span type="end"></span>\n`
 					);
 					if (view.file) this.renderVariables(view.file);
 					new Notice(`Query inserted`);
@@ -141,7 +161,7 @@ export default class LiveVariable extends Plugin {
 	 */
 	renderVariablesV1(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span id="(.+?)"\/>.*?<span type="end"\/>`,
+			String.raw`<span id="([^"]+)"\/>.*?<span type="end"\/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
@@ -168,7 +188,7 @@ export default class LiveVariable extends Plugin {
 
 	renderVariablesV2(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span query="([\s\S]+?)"\/>[\s\S]*?<span type="end"/>`,
+			String.raw`<span query="([^"]+)"\/>[\s\S]*?<span type="end"\/>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
@@ -180,7 +200,9 @@ export default class LiveVariable extends Plugin {
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
-						`<span query="${htmlEscapeNewLine(query)}"></span>${stringifyIfObj(
+						`<span query="${htmlEscapeNewLine(
+							query
+						)}"></span>${stringifyIfObj(
 							value
 						)}<span type="end"></span>`
 					);
@@ -192,7 +214,7 @@ export default class LiveVariable extends Plugin {
 
 	renderVariablesV3(file: TFile) {
 		const re = new RegExp(
-			String.raw`<span query="([\s\S]+?)"><\/span>[\s\S]*?<span type="end"><\/span>`,
+			String.raw`<span query="([^"]+?)"><\/span>[\s\S]*?<span type="end"><\/span>`,
 			'g'
 		);
 		this.app.vault.process(file, (data) => {
@@ -204,7 +226,9 @@ export default class LiveVariable extends Plugin {
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
-						`<span query="${htmlEscapeNewLine(query)}"></span>${stringifyIfObj(
+						`<span query="${htmlEscapeNewLine(
+							query
+						)}"></span>${stringifyIfObj(
 							value
 						)}<span type="end"></span>`
 					);

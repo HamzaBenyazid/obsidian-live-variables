@@ -49,8 +49,6 @@ const LiveVariablesReactSettingTab: FC<LiveVariableReactSettingTabProps> = ({
 	];
 
 	const deleteFunction = (customFunction: CustomFunction) => {
-		console.log('deleteFunction');
-		console.log(customFunction);
 		plugin.settings.customFunctions.remove(customFunction);
 		plugin.saveSettings();
 	};
