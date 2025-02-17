@@ -4,7 +4,7 @@
 # v2.0.0 is out!
 </div>
 <p align="center">
-  <a href="https://github.com/Mahmud0808/Iconify/releases"><img src="https://img.shields.io/github/downloads/HamzaBenyazid/obsidian-live-variables/total?color=%233DDC84&logo=github&logoColor=%23fff&style=for-the-badge" alt="Downloads"></a>
+  <a href="https://github.com/HamzaBenyazid/obsidian-live-variables/releases"><img src="https://img.shields.io/github/downloads/HamzaBenyazid/obsidian-live-variables/total?color=%233DDC84&logo=github&logoColor=%23fff&style=for-the-badge" alt="Downloads"></a>
 </p>
 
 **Supercharge your notes with dynamic data!** The Live Variables Plugin v2 revolutionizes how you manage information in Obsidian. Define variables once, reuse them everywhere, and watch your notes auto-update—now with powerful code blocks, smart queries, and an intuitive form interface.
