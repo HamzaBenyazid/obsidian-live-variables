@@ -7,7 +7,7 @@ import {
 	getAllVaultProperties,
 	getArgNames,
 	getFileProperties,
-	minimizeJsFunction,
+	minifyCode,
 	stringifyIfObj,
 	trancateString,
 } from 'src/utils';
@@ -197,16 +197,18 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 		);
 	}, [queryFunc, functionArgs, codeBlockArgs, vars]);
 
-	const computeValue = useCallback(() => {
+	const computeValue = useCallback(async () => {
 		if (!valideArgs()) {
 			setValue(undefined);
 			return;
 		}
 		const file = modal.file;
 		if (isCustomFunction() && valideFunctionCode()) {
+			const minimalFunctionCode = await minifyCode(functionCode);
+			console.log("minimalFunctionCode: ", minimalFunctionCode)
 			const query = `jsFunc(${vars.map(
 				(it) => it[1]
-			)}, func = ${minimizeJsFunction(functionCode)})`;
+			)}, func = ${minimalFunctionCode})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
 			setValue(computeValueFromQuery(query, context));
