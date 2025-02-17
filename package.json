@@ -19,6 +19,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@stylistic/eslint-plugin-js": "^2.8.0",
+		"@types/he": "^1.2.3",
 		"@types/node": "^16.11.6",
 		"@types/prismjs": "^1.26.4",
 		"@types/react": "^18.3.11",
@@ -45,6 +46,7 @@
 		"antd": "^5.21.2",
 		"codemirror": "^6.0.1",
 		"eslint-plugin-react": "^7.37.1",
+		"he": "^1.2.0",
 		"prismjs": "^1.29.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",

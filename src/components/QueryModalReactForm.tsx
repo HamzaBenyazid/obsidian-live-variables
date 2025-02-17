@@ -16,6 +16,7 @@ import { computeValueFromQuery, parseQuery } from 'src/VariableQueryParser';
 import QueryModal from 'src/QueryModal';
 import { LiveVariablesSettings } from 'src/LiveVariablesSettings';
 import { TFile } from 'obsidian';
+import { escape } from 'he';
 
 interface QueryModalFormProperties {
 	modal: QueryModal;
@@ -205,7 +206,6 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 		const file = modal.file;
 		if (isCustomFunction() && valideFunctionCode()) {
 			const minimalFunctionCode = await minifyCode(functionCode);
-			console.log("minimalFunctionCode: ", minimalFunctionCode)
 			const query = `jsFunc(${vars.map(
 				(it) => it[1]
 			)}, func = ${minimalFunctionCode})`;
@@ -215,7 +215,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 		} else if (queryFunc === 'codeBlock') {
 			const query = `codeBlock(${codeBlockArgs.map(
 				(arg) => Object.fromEntries(vars)[arg]
-			)}, code = ${codeBlockText}, lang = ${codeBlockLang})`;
+			)}, code = ${escape(codeBlockText)}, lang = ${codeBlockLang})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
 			setValue(computeValueFromQuery(query, context));
