@@ -28,6 +28,7 @@ import {
 	LiveVariablesSettings,
 	LiveVariablesSettingTab,
 } from './LiveVariablesSettings';
+import { unescape } from 'he';
 
 export default class LiveVariable extends Plugin {
 	public settings: LiveVariablesSettings;
@@ -118,7 +119,7 @@ export default class LiveVariable extends Plugin {
 					editor.replaceSelection(
 						`<span query="${htmlEscapeNewLine(
 							query
-						)}"></span>${value}<span type="end"></span>\n`
+						)}"></span>${unescape(value)}<span type="end"></span>\n`
 					);
 					if (view.file) this.renderVariables(view.file);
 					new Notice(`Query inserted`);
@@ -175,7 +176,7 @@ export default class LiveVariable extends Plugin {
 					data = data.replace(
 						match[0],
 						`<span query="get(${key})"></span>${stringifyIfObj(
-							value
+							unescape(value)
 						)}<span type="end"></span>`
 					);
 				} else {
@@ -203,7 +204,7 @@ export default class LiveVariable extends Plugin {
 						`<span query="${htmlEscapeNewLine(
 							query
 						)}"></span>${stringifyIfObj(
-							value
+							unescape(value)
 						)}<span type="end"></span>`
 					);
 				}
@@ -229,7 +230,7 @@ export default class LiveVariable extends Plugin {
 						`<span query="${htmlEscapeNewLine(
 							query
 						)}"></span>${stringifyIfObj(
-							value
+							unescape(value)
 						)}<span type="end"></span>`
 					);
 				}
