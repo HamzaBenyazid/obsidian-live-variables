@@ -16,7 +16,7 @@ import { computeValueFromQuery, parseQuery } from 'src/VariableQueryParser';
 import QueryModal from 'src/QueryModal';
 import { LiveVariablesSettings } from 'src/LiveVariablesSettings';
 import { TFile } from 'obsidian';
-import { escape } from 'he';
+import { escape, unescape } from 'he';
 
 interface QueryModalFormProperties {
 	modal: QueryModal;
@@ -218,7 +218,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 			)}, code = ${escape(codeBlockText)}, lang = ${codeBlockLang})`;
 			setQuery(query);
 			const context = { currentFile: file, app };
-			setValue(computeValueFromQuery(query, context));
+			setValue(unescape(computeValueFromQuery(query, context)));
 		} else if (!isCustomFunction()) {
 			const query = `${queryFunc}(${vars.map((it) => it[1])})`;
 			setQuery(query);
