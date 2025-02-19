@@ -176,7 +176,7 @@ export default class LiveVariable extends Plugin {
 					data = data.replace(
 						match[0],
 						`<span query="get(${key})"></span>${stringifyIfObj(
-							unescape(value)
+							value
 						)}<span type="end"></span>`
 					);
 				} else {
@@ -204,7 +204,7 @@ export default class LiveVariable extends Plugin {
 						`<span query="${htmlEscapeNewLine(
 							query
 						)}"></span>${stringifyIfObj(
-							unescape(value)
+							value
 						)}<span type="end"></span>`
 					);
 				}
@@ -230,7 +230,7 @@ export default class LiveVariable extends Plugin {
 						`<span query="${htmlEscapeNewLine(
 							query
 						)}"></span>${stringifyIfObj(
-							unescape(value)
+							value
 						)}<span type="end"></span>`
 					);
 				}

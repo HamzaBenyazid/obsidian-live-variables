@@ -4,6 +4,7 @@ import {
 	assertNoUndefinedElems,
 } from './assertions';
 import { checkArrayTypes, getValueByPath, stringifyIfObj } from './utils';
+import { unescape } from 'he';
 
 export const getVariableValue = (id: string, context: LiveVariablesContext) => {
 	if (id === '') return undefined;
@@ -193,7 +194,7 @@ export const codeBlockFunc = (
 			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/, value);
 		});
 		const computedValue = `\n\`\`\`${lang}\n${codeBlock}\n\`\`\`\n`;
-		return computedValue;
+		return unescape(computedValue);
 	} catch {
 		return undefined;
 	}
