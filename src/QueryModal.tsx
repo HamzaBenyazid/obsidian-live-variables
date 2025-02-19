@@ -20,14 +20,14 @@ export default class QueryModal extends Modal {
 	query = '';
 	value = '';
 	plugin: LiveVariable;
-	onSubmit: (query: string, value: string) => void;
+	onSubmit: (query: string, value: string, edit: boolean) => void;
 
 	constructor(
 		app: App,
 		view: MarkdownView,
 		plugin: LiveVariable,
 		query: string,
-		onSubmit: (query: string, value: string) => void
+		onSubmit: (query: string, value: string, edit: boolean) => void
 	) {
 		super(app);
 		this.view = view;

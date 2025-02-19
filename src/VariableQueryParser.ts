@@ -131,7 +131,7 @@ export const computeValue = (
 	}
 };
 
-enum Functions {
+export enum Functions {
 	SUM = 'sum',
 	GET = 'get',
 	CONCAT = 'concat',

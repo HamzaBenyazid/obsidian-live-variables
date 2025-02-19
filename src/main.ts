@@ -104,26 +104,63 @@ export default class LiveVariable extends Plugin {
 				const editorPosition = editor.getCursor();
 				const lines = editor.getValue().split('\n');
 				let query = '';
+				let refStartLine: number;
+				let refEndLine: number;
+				let refStartCh: number;
+				let refEndCh: number;
 
 				// Traverse lines above the cursor to find the opening backticks
 				for (let i = editorPosition.line; i >= 0; i--) {
-					if (lines[i].contains('<span type="end"></span>')) {
-						break;
-					}
 					const match = re.exec(lines[i]);
 					if (match) {
 						query = getNewLinesFromHtmlEscaping(match[1]);
+						refStartLine = i;
+						// Get start position of match[1]
+						refStartCh = match.index;
+						break;
+					}
+					if (
+						i !== editorPosition.line &&
+						lines[i].contains('<span type="end"></span>')
+					) {
+						break;
 					}
 				}
-				new QueryModal(this.app, view, this, query, (query, value) => {
-					editor.replaceSelection(
-						`<span query="${htmlEscapeNewLine(
-							query
-						)}"></span>${unescape(value)}<span type="end"></span>\n`
-					);
-					if (view.file) this.renderVariables(view.file);
-					new Notice(`Query inserted`);
-				}).open();
+
+				const refEndRE = new RegExp(
+					String.raw`<span type="end"><\/span>`,
+					'g'
+				);
+				// Traverse lines bellow to search for the end of the reference
+				for (let i = editorPosition.line; i < editor.lineCount(); i++) {
+					const match = refEndRE.exec(lines[i]);
+					if (match) {
+						refEndLine = i;
+						refEndCh = match.index + match[0].length;
+					}
+				}
+				new QueryModal(
+					this.app,
+					view,
+					this,
+					query,
+					(query, value, edit) => {
+						if (edit) {
+							editor.setSelection(
+								{ line: refStartLine, ch: refStartCh },
+								{ line: refEndLine, ch: refEndCh }
+							);
+						}
+						editor.replaceSelection(
+							`<span query="${htmlEscapeNewLine(
+								query
+							)}"></span>${unescape(
+								value
+							)}<span type="end"></span>\n`
+						);
+						new Notice(`Query ${edit ? 'Updated' : 'Inserted'}`);
+					}
+				).open();
 			},
 		});
 

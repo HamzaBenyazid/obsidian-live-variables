@@ -12,7 +12,10 @@ import {
 	trancateString,
 } from 'src/utils';
 import { CloseOutlined, SaveFilled } from '@ant-design/icons';
-import { computeValueFromQuery, parseQuery } from 'src/VariableQueryParser';
+import {
+	computeValueFromQuery,
+	parseQuery,
+} from 'src/VariableQueryParser';
 import QueryModal from 'src/QueryModal';
 import { LiveVariablesSettings } from 'src/LiveVariablesSettings';
 import { TFile } from 'obsidian';
@@ -65,6 +68,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 		...getAllVaultProperties(app),
 	};
 	const defaultQueryFunction = 'get';
+	const edit = initQuery.length === 0 ? false : true;
 	const [queryFunc, setQueryFunc] = useState<string>(defaultQueryFunction);
 	const [vars, setVars] = useState<[string, string][]>([]);
 	const [value, setValue] = useState<string | undefined>(undefined);
@@ -227,7 +231,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 		} else {
 			setValue(undefined);
 		}
-	}, [queryFunc, vars, functionCode, codeBlockText]);
+	}, [queryFunc, vars, functionCode, codeBlockText, codeBlockLang]);
 
 	const updateCodeBlockVarsSize = () => {
 		if (queryFunc === 'codeBlock') {
@@ -289,7 +293,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 	useEffect(() => {
 		setVisibleArgsError(false);
 		computeValue();
-	}, [queryFunc, vars, functionCode]);
+	}, [queryFunc, vars, functionCode, codeBlockText, codeBlockLang]);
 
 	useEffect(() => {
 		setFunctionArgs(getArgNames(functionCode));
@@ -311,7 +315,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 	}, [codeBlockArgs, codeBlockText]);
 
 	useEffect(() => {
-		if (initQuery != '') {
+		if (edit) {
 			initializeQuery();
 		}
 	}, [initQuery]);
@@ -357,7 +361,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 						const value = e.target.value;
 						setQueryFunc(value);
 					}}
-					defaultValue={defaultQueryFunction}
+					value={queryFunc}
 				/>
 			</Setting>
 			{queryFunc === 'codeBlock' && (
@@ -371,6 +375,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 							name="Code language"
 						>
 							<Setting.Text
+								value={codeBlockLang}
 								placeHolder="code language"
 								onChange={(e) => {
 									setCodeBlockLang(e.target.value);
@@ -536,11 +541,11 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 							return;
 						}
 						modal.close();
-						modal.onSubmit(query, stringifyIfObj(value));
+						modal.onSubmit(query, stringifyIfObj(value), edit);
 						if (saveFunctionChecked) saveFunction();
 					}}
 				>
-					Insert
+					{edit ? 'Update' : 'Insert'}
 				</Setting.Button>
 			</Setting>
 		</div>
