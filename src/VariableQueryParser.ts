@@ -1,8 +1,5 @@
 import { App, TFile } from 'obsidian';
-import {
-	assertListHasExactlyOneElement,
-	assertNoUndefinedElems,
-} from './assertions';
+import { assertNoUndefinedElems } from './assertions';
 import { checkArrayTypes, getValueByPath, stringifyIfObj } from './utils';
 import { unescape } from 'he';
 
@@ -142,14 +139,6 @@ enum Functions {
 
 export const getFunc = (args: string[], context: LiveVariablesContext) => {
 	const values = args.map((id) => getVariableValue(id, context));
-	assertNoUndefinedElems(
-		values,
-		"Can't compute an undefined value, please make sure that all variable refrences are correctly set"
-	);
-	assertListHasExactlyOneElement(
-		values,
-		"can't get multiple values, please specify only one value"
-	);
 	return values[0];
 };
 
