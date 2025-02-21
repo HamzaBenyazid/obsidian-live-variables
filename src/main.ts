@@ -37,6 +37,12 @@ export default class LiveVariable extends Plugin {
 		currentProperties: FrontMatterCache | undefined,
 		newProperties: FrontMatterCache | undefined
 	) => {
+		if (
+			Object.entries(currentProperties ?? {}).length !==
+			Object.entries(newProperties ?? {}).length
+		) {
+			return true;
+		}
 		for (const [newPropKey, newPropVal] of Object.entries(
 			newProperties ?? {}
 		)) {
@@ -180,7 +186,11 @@ export default class LiveVariable extends Plugin {
 						)}<span type="end"></span>`
 					);
 				} else {
-					throw Error(`Couldn't get value of variable ${key}`);
+					data = data.replace(
+						match[0],
+						`<span query="get(${key})"></span><span style="color: red">Live Variable Error</span><span type="end"></span>`
+					);
+					// new Notice(`Failed to get value of variable ${key}`);
 				}
 			});
 			return data;
@@ -194,18 +204,29 @@ export default class LiveVariable extends Plugin {
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-				const query = getNewLinesFromHtmlEscaping(match[1]);
+				console.log('here2');
+
+				const escapedQuery = match[1];
+				const query = getNewLinesFromHtmlEscaping(escapedQuery);
 				const context = { currentFile: file, app: this.app };
 				const varQuery: VarQuery = parseQuery(query, context);
 				const value = computeValue(varQuery, context);
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
-						`<span query="${htmlEscapeNewLine(
-							query
-						)}"></span>${stringifyIfObj(
+						`<span query="${escapedQuery}"></span>${stringifyIfObj(
 							value
 						)}<span type="end"></span>`
+					);
+				} else {
+					data = data.replace(
+						match[0],
+						`<span query="${escapedQuery}"></span>${this.errorSpan(
+							'Invalid Query'
+						)}<span type="end"></span>`
+					);
+					new Notice(
+						`Failed to get value of query "${escapedQuery}"`
 					);
 				}
 			});
@@ -220,24 +241,38 @@ export default class LiveVariable extends Plugin {
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-				const query = getNewLinesFromHtmlEscaping(match[1]);
+				console.log('here');
+				const escapedQuery = match[1];
+				const query = getNewLinesFromHtmlEscaping(escapedQuery);
 				const context = { currentFile: file, app: this.app };
 				const varQuery: VarQuery = parseQuery(query, context);
 				const value = computeValue(varQuery, context);
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
-						`<span query="${htmlEscapeNewLine(
-							query
-						)}"></span>${stringifyIfObj(
+						`<span query="${escapedQuery}"></span>${stringifyIfObj(
 							value
 						)}<span type="end"></span>`
+					);
+				} else {
+					data = data.replace(
+						match[0],
+						`<span query="${escapedQuery}"></span>${this.errorSpan(
+							'Invalid Query'
+						)}<span type="end"></span>`
+					);
+					new Notice(
+						`Failed to get value of query "${escapedQuery}"`
 					);
 				}
 			});
 			return data;
 		});
 	}
+
+	errorSpan = (message: string) => {
+		return `<span style="color: red">Error: ${message}</span>`;
+	};
 
 	onunload() {}
 

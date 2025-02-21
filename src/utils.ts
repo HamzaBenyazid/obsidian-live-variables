@@ -121,22 +121,26 @@ export const trancateString = (str: string, maxLength: number): string => {
 };
 
 export async function minifyCode(jsCode: string) {
-  try {
-    // Wrap in "const fn =" to make it valid for Terser
-    const wrappedCode = `const fn = ${jsCode};`;
-    
-    // Minify with Terser
-    const result = await minify(wrappedCode);
+	try {
+		// Wrap in "const fn =" to make it valid for Terser
+		const wrappedCode = `const fn = ${jsCode};`;
 
-    if (result.code) {
-      // Remove "const fn =" from the minified output
-      return result.code.replace(/^const fn=|\s*;$/g, "");
-    }
+		// Minify with Terser
+		const result = await minify(wrappedCode, {
+			format: {
+				quote_style: 1, // Prefer single quotes
+			},
+		});
 
-    return null;
-  } catch (error) {
-    console.error("Error minifying code:", error);
-  }
+		if (result.code) {
+			// Remove "const fn =" from the minified output
+			return result.code.replace(/^const fn=|\s*;$/g, '');
+		}
+
+		return null;
+	} catch (error) {
+		console.error('Error minifying code:', error);
+	}
 }
 
 export const firstNElement = (arr: any[], n: number, defaultValue: any) => {
