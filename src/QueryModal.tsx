@@ -5,6 +5,7 @@ import { createRoot, Root } from 'react-dom/client';
 import QueryModalForm from './components/QueryModalReactForm';
 import { createContext } from 'react';
 import LiveVariable from './main';
+import { tryParseQuery } from './VariableQueryParser';
 
 export const AppContext = createContext<App | undefined>(undefined);
 
@@ -20,14 +21,14 @@ export default class QueryModal extends Modal {
 	query = '';
 	value = '';
 	plugin: LiveVariable;
-	onSubmit: (query: string, value: string) => void;
+	onSubmit: (query: string, value: string, edit: boolean) => void;
 
 	constructor(
 		app: App,
 		view: MarkdownView,
 		plugin: LiveVariable,
 		query: string,
-		onSubmit: (query: string, value: string) => void
+		onSubmit: (query: string, value: string, edit: boolean) => void
 	) {
 		super(app);
 		this.view = view;
@@ -44,6 +45,13 @@ export default class QueryModal extends Modal {
 	}
 
 	renderReactForm() {
-		this.root?.render(<QueryModalForm modal={this} initQuery={this.query} file={this.file}/>);
+		const initQuery = tryParseQuery(this.query);
+		this.root?.render(
+			<QueryModalForm
+				modal={this}
+				initQuery={initQuery}
+				file={this.file}
+			/>
+		);
 	}
 }

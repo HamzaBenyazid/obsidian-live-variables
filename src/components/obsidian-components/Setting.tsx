@@ -56,6 +56,7 @@ interface SettingTextProps {
 	spellCheck?: boolean;
 	placeHolder?: string;
 	onChange?: ChangeEventHandler<HTMLInputElement>;
+	value?: string | number | readonly string[];
 }
 
 Setting.Text = ({
@@ -63,9 +64,11 @@ Setting.Text = ({
 	spellCheck = false,
 	placeHolder = '',
 	onChange = () => {},
+	value,
 }) => {
 	return (
 		<input
+			value={value}
 			type={type}
 			spellCheck={spellCheck}
 			placeholder={placeHolder}
@@ -91,20 +94,12 @@ Setting.Button = ({ onClick, children, cta = false }) => {
 interface SettingDropdownProps {
 	options: Record<string, { displayValue: string; desc?: string }>;
 	onChange?: ChangeEventHandler<HTMLSelectElement>;
-	defaultValue: string;
+	value?: string | number | readonly string[];
 }
 
-Setting.Dropdown = ({
-	options = {},
-	onChange,
-	defaultValue = Object.isEmpty(options) ? '' : Object.entries(options)[0][0],
-}) => {
+Setting.Dropdown = ({ options = {}, onChange, value }) => {
 	return (
-		<select
-			className="dropdown"
-			onChange={onChange}
-			defaultValue={defaultValue}
-		>
+		<select className="dropdown" onChange={onChange} value={value}>
 			{Object.entries(options).map(([value, { displayValue }], index) => {
 				return (
 					<option key={index} value={value}>
@@ -119,18 +114,18 @@ Setting.Dropdown = ({
 interface SettingSearchProps {
 	suggestions?: string[];
 	onChange?: (value: string) => void;
-	defaultValue?: string;
+	value?: string;
 	placeHolder?: string;
 }
 
 Setting.Search = ({
 	placeHolder = '',
 	suggestions = [],
-	defaultValue = '',
+	value: initValue = '',
 	onChange = () => {},
 }) => {
 	const [items, setItems] = useState<MenuProps['items']>([]);
-	const [value, setValue] = useState(defaultValue);
+	const [value, setValue] = useState(initValue);
 	const [selectedKey, setSelectedKey] = useState<string>('');
 	useEffect(() => {
 		setItems(
