@@ -117,18 +117,18 @@ export default class LiveVariable extends Plugin {
 
 				// Traverse lines above the cursor to find the opening backticks
 				for (let i = editorPosition.line; i >= 0; i--) {
+					if (
+						i !== editorPosition.line &&
+						lines[i].contains('<span type="end"></span>')
+					) {
+						break;
+					}
 					const match = re.exec(lines[i]);
 					if (match) {
 						query = getNewLinesFromHtmlEscaping(match[1]);
 						refStartLine = i;
 						// Get start position of match[1]
 						refStartCh = match.index;
-						break;
-					}
-					if (
-						i !== editorPosition.line &&
-						lines[i].contains('<span type="end"></span>')
-					) {
 						break;
 					}
 				}
@@ -145,6 +145,7 @@ export default class LiveVariable extends Plugin {
 						refEndCh = match.index + match[0].length;
 					}
 				}
+
 				new QueryModal(
 					this.app,
 					view,
@@ -241,12 +242,11 @@ export default class LiveVariable extends Plugin {
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-				console.log('here2');
 
 				const escapedQuery = match[1];
 				const query = getNewLinesFromHtmlEscaping(escapedQuery);
 				const context = { currentFile: file, app: this.app };
-				const varQuery: VarQuery = parseQuery(query, context);
+				const varQuery: VarQuery = parseQuery(query);
 				const value = computeValue(varQuery, context);
 				if (value !== undefined) {
 					data = data.replace(
@@ -278,11 +278,10 @@ export default class LiveVariable extends Plugin {
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-				console.log('here');
 				const escapedQuery = match[1];
 				const query = getNewLinesFromHtmlEscaping(escapedQuery);
 				const context = { currentFile: file, app: this.app };
-				const varQuery: VarQuery = parseQuery(query, context);
+				const varQuery: VarQuery = parseQuery(query);
 				const value = computeValue(varQuery, context);
 				if (value !== undefined) {
 					data = data.replace(

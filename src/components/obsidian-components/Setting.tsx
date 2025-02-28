@@ -97,17 +97,9 @@ interface SettingDropdownProps {
 	value?: string | number | readonly string[];
 }
 
-Setting.Dropdown = ({
-	options = {},
-	onChange,
-	value,
-}) => {
+Setting.Dropdown = ({ options = {}, onChange, value }) => {
 	return (
-		<select
-			className="dropdown"
-			onChange={onChange}
-			value={value}
-		>
+		<select className="dropdown" onChange={onChange} value={value}>
 			{Object.entries(options).map(([value, { displayValue }], index) => {
 				return (
 					<option key={index} value={value}>
@@ -122,18 +114,18 @@ Setting.Dropdown = ({
 interface SettingSearchProps {
 	suggestions?: string[];
 	onChange?: (value: string) => void;
-	defaultValue?: string;
+	value?: string;
 	placeHolder?: string;
 }
 
 Setting.Search = ({
 	placeHolder = '',
 	suggestions = [],
-	defaultValue = '',
+	value: initValue = '',
 	onChange = () => {},
 }) => {
 	const [items, setItems] = useState<MenuProps['items']>([]);
-	const [value, setValue] = useState(defaultValue);
+	const [value, setValue] = useState(initValue);
 	const [selectedKey, setSelectedKey] = useState<string>('');
 	useEffect(() => {
 		setItems(

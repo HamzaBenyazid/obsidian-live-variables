@@ -40,10 +40,7 @@ export interface LiveVariablesContext {
 	currentFile: TFile;
 }
 
-export const parseQuery = (
-	query: string,
-	context: LiveVariablesContext
-): VarQuery => {
+export const parseQuery = (query: string): VarQuery => {
 	const re = new RegExp(
 		String.raw`(${getSupportedFunctions().join('|')})\(([\s\S]*)\)`,
 		'g'
@@ -57,7 +54,15 @@ export const parseQuery = (
 			args,
 		};
 	} else {
-		throw Error(`error paring ref: ${query}.`);
+		throw Error(`error parsing ref: ${query}.`);
+	}
+};
+
+export const tryParseQuery = (query: string): VarQuery | undefined => {
+	try {
+		return parseQuery(query);
+	} catch (e) {
+		return undefined;
 	}
 };
 
@@ -109,8 +114,20 @@ export const computeValueFromQuery = (
 	query: string,
 	context: LiveVariablesContext
 ) => {
-	const varQuery = parseQuery(query, context);
+	const varQuery = parseQuery(query);
 	return computeValue(varQuery, context);
+};
+
+export const tryComputeValueFromQuery = (
+	query: string,
+	context: LiveVariablesContext
+) => {
+	try {
+		const varQuery = parseQuery(query);
+		return computeValue(varQuery, context);
+	} catch (e) {
+		return undefined;
+	}
 };
 
 export const computeValue = (
