@@ -156,7 +156,7 @@ export enum Functions {
 
 export const getFunc = (args: string[], context: LiveVariablesContext) => {
 	const values = args.map((id) => getVariableValue(id, context));
-	return values[0];
+	return values[0] ?? '';
 };
 
 export const sumFunc = (args: string[], context: LiveVariablesContext) => {
