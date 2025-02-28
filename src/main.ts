@@ -242,7 +242,6 @@ export default class LiveVariable extends Plugin {
 		);
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
-
 				const escapedQuery = match[1];
 				const query = getNewLinesFromHtmlEscaping(escapedQuery);
 				const context = { currentFile: file, app: this.app };
