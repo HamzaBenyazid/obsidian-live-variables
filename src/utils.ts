@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, TFolder } from 'obsidian';
 import { minify } from 'terser';
 
 export const getValueByPath = (obj: any, path: string): any => {
@@ -60,24 +60,38 @@ export const getAllVaultProperties = (
 	app: App | undefined
 ): Record<string, never> => {
 	return (
-		app?.vault.getFiles().reduce((acc, file) => {
-			const props = app.metadataCache.getFileCache(file)?.frontmatter;
-			if (props) {
-				const nestedProps = getAllNestedKeyValuePairs(props).reduce(
-					(
-						nestedAcc: Record<string, never>,
-						[key, value]: [string, never]
-					) => {
-						nestedAcc[`${file.path}/${key}`] = value;
-						return nestedAcc;
-					},
-					{}
-				);
-				Object.assign(acc, nestedProps);
+		app?.vault.getAllLoadedFiles().reduce((acc, file) => {
+			if (file instanceof TFolder) {
+				Object.assign(acc, {
+					[file.path]: getFolderProperties(file, app),
+				});
+			} else if (file instanceof TFile) {
+				const props = app.metadataCache.getFileCache(file)?.frontmatter;
+				Object.assign(acc, { [file.path]: props });
+				if (props) {
+					const nestedProps = getAllNestedKeyValuePairs(props).reduce(
+						(
+							nestedAcc: Record<string, never>,
+							[key, value]: [string, never]
+						) => {
+							nestedAcc[`${file.path}/${key}`] = value;
+							return nestedAcc;
+						},
+						{}
+					);
+					Object.assign(acc, nestedProps);
+				}
 			}
 			return acc;
 		}, {}) ?? {}
 	);
+};
+
+export const getFolderProperties = (
+	file: TFolder | null,
+	app: App | undefined
+): Record<string, never> => {
+	return {};
 };
 
 export const getFileProperties = (

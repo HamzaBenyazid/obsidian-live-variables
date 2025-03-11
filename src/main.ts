@@ -8,15 +8,8 @@ import {
 	SuggestModal,
 	TFile,
 } from 'obsidian';
+import { tryComputeValueFromQuery } from './VariableQueryParser';
 import {
-	VarQuery,
-	computeValue,
-	getVariableValue,
-	parseQuery,
-} from './VariableQueryParser';
-import {
-	getAllNestedKeyValuePairs,
-	getAllVaultProperties,
 	trancateString,
 	stringifyIfObj,
 	htmlEscapeNewLine,
@@ -29,9 +22,11 @@ import {
 	LiveVariablesSettingTab,
 } from './LiveVariablesSettings';
 import { unescape } from 'he';
+import VaultProperties from './VaultProperties';
 
 export default class LiveVariable extends Plugin {
 	public settings: LiveVariablesSettings;
+	public vaultProperties: VaultProperties;
 
 	propertyChanged = (
 		currentProperties: FrontMatterCache | undefined,
@@ -58,10 +53,13 @@ export default class LiveVariable extends Plugin {
 		let fileProperties: FrontMatterCache | undefined;
 		await this.loadSettings();
 
+		this.vaultProperties = new VaultProperties(this.app);
+
 		// initialize properties
 		this.app.workspace.on('active-leaf-change', (leaf) => {
 			const file = this.app.workspace.getActiveFile();
 			if (file) {
+				this.vaultProperties.updateProperties(file);
 				fileProperties =
 					this.app.metadataCache.getFileCache(file)?.frontmatter;
 				this.renderVariables(file);
@@ -81,7 +79,8 @@ export default class LiveVariable extends Plugin {
 							`<span query="get(${property.key})"></span>${property.value}<span type="end"></span>\n`
 						);
 						new Notice(`Variable ${property.key} inserted`);
-					}
+					},
+					this.vaultProperties
 				).open();
 			},
 		});
@@ -90,12 +89,18 @@ export default class LiveVariable extends Plugin {
 			id: 'insert-global-variable',
 			name: 'Insert variable from another note',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				new PropertySelectionModal(this.app, view, true, (property) => {
-					editor.replaceSelection(
-						`<span query="get(${property.key})"></span>${property.value}<span type="end"></span>\n`
-					);
-					new Notice(`Variable ${property.key} inserted`);
-				}).open();
+				new PropertySelectionModal(
+					this.app,
+					view,
+					true,
+					(property) => {
+						editor.replaceSelection(
+							`<span query="get(${property.key})"></span>${property.value}<span type="end"></span>\n`
+						);
+						new Notice(`Variable ${property.key} inserted`);
+					},
+					this.vaultProperties
+				).open();
 			},
 		});
 
@@ -110,10 +115,10 @@ export default class LiveVariable extends Plugin {
 				const editorPosition = editor.getCursor();
 				const lines = editor.getValue().split('\n');
 				let query = '';
-				let refStartLine: number;
-				let refEndLine: number;
-				let refStartCh: number;
-				let refEndCh: number;
+				let refStartLine = 0;
+				let refEndLine = 0;
+				let refStartCh = 0;
+				let refEndCh = 0;
 
 				// Traverse lines above the cursor to find the opening backticks
 				for (let i = editorPosition.line; i >= 0; i--) {
@@ -143,6 +148,7 @@ export default class LiveVariable extends Plugin {
 					if (match) {
 						refEndLine = i;
 						refEndCh = match.index + match[0].length;
+						break;
 					}
 				}
 
@@ -150,6 +156,7 @@ export default class LiveVariable extends Plugin {
 					this.app,
 					view,
 					this,
+					this.vaultProperties,
 					query,
 					(query, value, edit) => {
 						if (edit) {
@@ -186,6 +193,7 @@ export default class LiveVariable extends Plugin {
 					const file = this.app.vault.getFileByPath(path.path);
 					if (file) {
 						this.renderVariables(file);
+						this.vaultProperties.updateProperties(file);
 					}
 					fileProperties = frontmatterProperties;
 				}
@@ -212,10 +220,7 @@ export default class LiveVariable extends Plugin {
 		this.app.vault.process(file, (data) => {
 			[...data.matchAll(re)].forEach((match) => {
 				const key = match[1];
-				const value = getVariableValue(key, {
-					currentFile: file,
-					app: this.app,
-				});
+				const value = this.vaultProperties.getProperty(key);
 				if (value) {
 					data = data.replace(
 						match[0],
@@ -228,7 +233,7 @@ export default class LiveVariable extends Plugin {
 						match[0],
 						`<span query="get(${key})"></span><span style="color: red">Live Variable Error</span><span type="end"></span>`
 					);
-					// new Notice(`Failed to get value of variable ${key}`);
+					new Notice(`Failed to get value of variable ${key}`);
 				}
 			});
 			return data;
@@ -244,9 +249,10 @@ export default class LiveVariable extends Plugin {
 			[...data.matchAll(re)].forEach((match) => {
 				const escapedQuery = match[1];
 				const query = getNewLinesFromHtmlEscaping(escapedQuery);
-				const context = { currentFile: file, app: this.app };
-				const varQuery: VarQuery = parseQuery(query);
-				const value = computeValue(varQuery, context);
+				const value = tryComputeValueFromQuery(
+					query,
+					this.vaultProperties
+				);
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
@@ -279,9 +285,10 @@ export default class LiveVariable extends Plugin {
 			[...data.matchAll(re)].forEach((match) => {
 				const escapedQuery = match[1];
 				const query = getNewLinesFromHtmlEscaping(escapedQuery);
-				const context = { currentFile: file, app: this.app };
-				const varQuery: VarQuery = parseQuery(query);
-				const value = computeValue(varQuery, context);
+				const value = tryComputeValueFromQuery(
+					query,
+					this.vaultProperties
+				);
 				if (value !== undefined) {
 					data = data.replace(
 						match[0],
@@ -324,7 +331,7 @@ export default class LiveVariable extends Plugin {
 	}
 }
 
-interface Property {
+export interface Property {
 	key: string;
 	value: string;
 }
@@ -333,17 +340,20 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 	onSelect: (property: Property) => void;
 	view: MarkdownView;
 	global: boolean;
+	vaultProperties: VaultProperties;
 
 	constructor(
 		app: App,
 		view: MarkdownView,
 		global: boolean,
-		onSelect: (property: Property) => void
+		onSelect: (property: Property) => void,
+		vaultProperties: VaultProperties
 	) {
 		super(app);
 		this.view = view;
 		this.global = global;
 		this.onSelect = onSelect;
+		this.vaultProperties = vaultProperties;
 	}
 
 	getSuggestions(query: string): Property[] {
@@ -355,31 +365,16 @@ export class PropertySelectionModal extends SuggestModal<Property> {
 
 	getLocalSuggestions(query: string): Property[] {
 		if (this.view.file) {
-			const properties =
-				this.app.metadataCache.getFileCache(this.view.file)
-					?.frontmatter ?? {};
-			return getAllNestedKeyValuePairs(properties)
-				.filter((property) =>
-					property[0].toLowerCase().includes(query.toLowerCase())
-				)
-				.map((entry) => ({
-					key: entry[0],
-					value: stringifyIfObj(entry[1]),
-				}));
+			return this.vaultProperties.findLocalPropertiesWithPathContaining(
+				this.view.file,
+				query
+			);
 		}
 		return [];
 	}
 
 	getGlobalSuggestions(query: string): Property[] {
-		const properties = getAllVaultProperties(this.app);
-		return Object.entries(properties)
-			.filter((property) =>
-				property[0].toLowerCase().includes(query.toLowerCase())
-			)
-			.map((entry) => ({
-				key: entry[0],
-				value: stringifyIfObj(entry[1]),
-			}));
+		return this.vaultProperties.findPropertiesWithPathContaining(query);
 	}
 
 	renderSuggestion(property: Property, el: HTMLElement) {

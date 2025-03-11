@@ -95,11 +95,17 @@ interface SettingDropdownProps {
 	options: Record<string, { displayValue: string; desc?: string }>;
 	onChange?: ChangeEventHandler<HTMLSelectElement>;
 	value?: string | number | readonly string[];
+	disabled?: boolean;
 }
 
-Setting.Dropdown = ({ options = {}, onChange, value }) => {
+Setting.Dropdown = ({ options = {}, onChange, value, disabled = false }) => {
 	return (
-		<select className="dropdown" onChange={onChange} value={value}>
+		<select
+			disabled={disabled}
+			className="dropdown"
+			onChange={onChange}
+			value={value}
+		>
 			{Object.entries(options).map(([value, { displayValue }], index) => {
 				return (
 					<option key={index} value={value}>
@@ -125,24 +131,28 @@ Setting.Search = ({
 	onChange = () => {},
 }) => {
 	const [items, setItems] = useState<MenuProps['items']>([]);
+
 	const [value, setValue] = useState(initValue);
 	const [selectedKey, setSelectedKey] = useState<string>('');
+
 	useEffect(() => {
-		setItems(
-			suggestions
-				.filter((suggestion) => suggestion.contains(value))
-				.map((suggestion, index) => {
-					return {
-						key: index + 1,
-						label: suggestion,
-						onClick: (_) => {
-							setValue(suggestion);
-						},
-					};
-				})
-		);
 		onChange(value);
 	}, [value]);
+
+	useEffect(() => {
+		setItems(
+			suggestions.map((suggestion, index) => {
+				return {
+					key: index + 1,
+					label: suggestion,
+					onClick: (_) => {
+						setValue(suggestion);
+					},
+				};
+			})
+		);
+	}, [suggestions]);
+
 	return (
 		<div className="search-input-container">
 			<Dropdown
@@ -153,7 +163,11 @@ Setting.Search = ({
 					style: {
 						backgroundColor: 'var(--background-primary)',
 						maxHeight: '250px',
-						overflow: 'auto',
+						maxWidth: '500px',
+						overflowY: 'auto', // Enable vertical scrolling
+						overflowX: 'auto', // Enable horizontal scrolling
+						whiteSpace: 'nowrap', // Prevent text from wrapping
+						display: 'block', // Ensure block display for proper scrolling
 					},
 					onSelect: (info) => {
 						setSelectedKey(info.key);
@@ -172,6 +186,7 @@ Setting.Search = ({
 					}}
 				/>
 			</Dropdown>
+
 			<div
 				className="search-input-clear-button"
 				onClick={() => {

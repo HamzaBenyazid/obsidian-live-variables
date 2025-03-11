@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Setting from './obsidian-components/Setting';
-import {
-	getAllVaultProperties,
-	getFileProperties,
-	stringifyIfObj,
-	trancateString,
-} from 'src/utils';
+import { stringifyIfObj, trancateString } from 'src/utils';
 import { tryComputeValueFromQuery, VarQuery } from 'src/VariableQueryParser';
 import QueryModal from 'src/QueryModal';
 import { TFile } from 'obsidian';
@@ -13,11 +8,13 @@ import { JsFuncRef, QueryJsFunc } from './QueryJsFunc';
 import { QueryCodeBlock } from './QueryCodeBlock';
 import { QueryGet } from './QueryGet';
 import { QueryPredefinedSum } from './QueryPredefinedSum';
+import VaultProperties from 'src/VaultProperties';
 
 interface QueryModalFormProperties {
 	modal: QueryModal;
 	initQuery?: VarQuery;
 	file: TFile;
+	vaultProperties: VaultProperties;
 }
 
 export interface FuncOption {
@@ -53,12 +50,8 @@ const defaultQueryFuncOptions: Record<string, FuncOption> = {
 const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 	modal,
 	initQuery,
+	vaultProperties,
 }) => {
-	const app = modal.app;
-	const variables: Record<string, never> = {
-		...getFileProperties(modal.file, app),
-		...getAllVaultProperties(app),
-	};
 	const DEFAULT_QUERY_FUNCTION = 'get';
 	const editMode = initQuery !== undefined;
 	const [queryFunc, setQueryFunc] = useState<string>(DEFAULT_QUERY_FUNCTION);
@@ -72,20 +65,18 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 	const jsFuncRef = useRef<JsFuncRef>(null);
 
 	const computeValue = async () => {
-		const file = modal.file;
-		const context = { currentFile: file, app };
-		setValue(tryComputeValueFromQuery(query, context));
+		setValue(tryComputeValueFromQuery(query, vaultProperties));
 	};
 
 	const handleSubmit = () => {
-		if (queryError.funcError?.message) {
+		if (queryError.funcError) {
 			setQueryError({
 				...queryError,
 				funcError: { ...queryError.funcError, visible: true },
 			});
 			return;
 		}
-		if (queryError.argsError?.message) {
+		if (queryError.argsError) {
 			setQueryError({
 				...queryError,
 				argsError: { ...queryError.argsError, visible: true },
@@ -138,6 +129,9 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 	}, []);
 
 	const getPreviewValue = () => {
+		if (queryError.argsError || queryError.funcError) {
+			return 'No valid value';
+		}
 		return value
 			? trancateString(stringifyIfObj(value), 100)
 			: 'No valid value';
@@ -151,6 +145,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 				desc={queryFuncOptions[queryFunc].desc}
 			>
 				<Setting.Dropdown
+					disabled={editMode}
 					options={queryFuncOptions}
 					onChange={(e) => {
 						const value = e.target.value;
@@ -161,7 +156,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 			</Setting>
 			{queryFunc === 'get' && (
 				<QueryGet
-					variables={variables}
+					vaultProperties={vaultProperties}
 					onQueryUpdate={setQuery}
 					initQuery={initQuery}
 					queryError={{
@@ -172,7 +167,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 			)}
 			{queryFunc === 'sum' && (
 				<QueryPredefinedSum
-					variables={variables}
+					vaultProperties={vaultProperties}
 					onQueryUpdate={setQuery}
 					initQuery={initQuery}
 					queryError={{
@@ -183,7 +178,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 			)}
 			{queryFunc === 'codeBlock' && (
 				<QueryCodeBlock
-					variables={variables}
+					vaultProperties={vaultProperties}
 					onQueryUpdate={setQuery}
 					initQuery={initQuery}
 					queryError={{
@@ -196,7 +191,7 @@ const QueryModalForm: React.FC<QueryModalFormProperties> = ({
 				<QueryJsFunc
 					ref={jsFuncRef}
 					plugin={modal.plugin}
-					variables={variables}
+					vaultProperties={vaultProperties}
 					onQueryUpdate={setQuery}
 					queryFuncOptions={queryFuncOptions}
 					queryFunc={queryFunc}

@@ -1,11 +1,11 @@
 import { App, Modal, MarkdownView, TFile } from 'obsidian';
 import { EditorView } from '@codemirror/view';
-import { getAllVaultProperties } from './utils';
 import { createRoot, Root } from 'react-dom/client';
 import QueryModalForm from './components/QueryModalReactForm';
 import { createContext } from 'react';
 import LiveVariable from './main';
 import { tryParseQuery } from './VariableQueryParser';
+import VaultProperties from './VaultProperties';
 
 export const AppContext = createContext<App | undefined>(undefined);
 
@@ -13,7 +13,7 @@ export default class QueryModal extends Modal {
 	root: Root | null = null;
 	customJsFuncSelected = false;
 	args: string[] = [];
-	variables: Record<string, never> = {};
+	vaultProperties: VaultProperties;
 	codeMirrorEditor: EditorView | null = null;
 	funcOption = '';
 	view: MarkdownView;
@@ -27,6 +27,7 @@ export default class QueryModal extends Modal {
 		app: App,
 		view: MarkdownView,
 		plugin: LiveVariable,
+		vaultProperties: VaultProperties,
 		query: string,
 		onSubmit: (query: string, value: string, edit: boolean) => void
 	) {
@@ -35,7 +36,7 @@ export default class QueryModal extends Modal {
 		if (view.file) {
 			this.file = view.file;
 			this.root = createRoot(this.contentEl);
-			this.variables = getAllVaultProperties(this.app);
+			this.vaultProperties = vaultProperties;
 			this.plugin = plugin;
 			this.query = query;
 			this.onSubmit = onSubmit;
@@ -51,6 +52,7 @@ export default class QueryModal extends Modal {
 				modal={this}
 				initQuery={initQuery}
 				file={this.file}
+				vaultProperties={this.vaultProperties}
 			/>
 		);
 	}

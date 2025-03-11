@@ -6,14 +6,13 @@ import {
 	firstNElement,
 	getArgNames,
 	minifyCode,
-	stringifyIfObj,
-	trancateString,
 } from 'src/utils';
 import { CloseOutlined, SaveFilled } from '@ant-design/icons';
 import { saveFunction } from 'src/service/function';
 import LiveVariable from 'src/main';
 import { FuncOption, QueryError } from './QueryModalReactForm';
 import { VarQuery } from 'src/VariableQueryParser';
+import VaultProperties from 'src/VaultProperties';
 
 const gptPrompt = `Please write me a lambda function in javascript that {{what should the function do}}, the format should be like : 
 \`\`\`
@@ -36,7 +35,7 @@ export interface JsFuncRef {
 
 interface QueryJsFuncProps {
 	plugin: LiveVariable;
-	variables: Record<string, never>;
+	vaultProperties: VaultProperties;
 	onQueryUpdate: (query: string) => void;
 	queryFuncOptions: Record<string, FuncOption>;
 	queryFunc: string;
@@ -51,7 +50,7 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 	(
 		{
 			plugin,
-			variables,
+			vaultProperties,
 			onQueryUpdate,
 			queryFuncOptions,
 			queryFunc,
@@ -92,7 +91,16 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 
 		const valideArgs = () => {
 			const exactSize = args.length;
-			if (vars.some((v) => v[1].length === 0)) return false;
+			if (vars.some((v) => v[1].length === 0)) {
+				queryError.onErrorUpdate({
+					...queryError.error,
+					argsError: {
+						message: `Arguments cannot be empty`,
+						visible: queryError.error.argsError?.visible,
+					},
+				});
+				return false;
+			}
 			if (exactSize && vars.length === exactSize) {
 				return vars.every(valideArg);
 			}
@@ -100,7 +108,7 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 		};
 
 		const valideArg = ([name, val]: [string, string]): boolean => {
-			if (variables[val] === undefined) {
+			if (vaultProperties.getProperty(val) === undefined) {
 				queryError.onErrorUpdate({
 					...queryError.error,
 					argsError: {
@@ -160,7 +168,6 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 		const loadSavedFunction = () => {
 			if (isSavedCustomFunction() && queryFuncOptions[queryFunc].code) {
 				setCode(queryFuncOptions[queryFunc].code);
-				console.log("queryFuncOptions[queryFunc].displayValue", queryFuncOptions[queryFunc].displayValue)
 				setName(queryFuncOptions[queryFunc].displayValue);
 			}
 		};
@@ -294,17 +301,14 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 							className="query-modal-sub-setting-item"
 							key={index + 1}
 							name={`Variable ${args[index]}`}
-							desc={`preview value: ${
-								variables[val]
-									? trancateString(
-											stringifyIfObj(variables[val]),
-											50
-									  )
-									: 'no value'
-							}`}
+							desc={`preview value: ${vaultProperties.getPropertyPreview(
+								val
+							)}`}
 						>
 							<Setting.Search
-								suggestions={Object.keys(variables)}
+								suggestions={vaultProperties.findPathsContaining(
+									val
+								)}
 								placeHolder={`Enter argument ${index + 1}`}
 								onChange={(value) => {
 									const newVars = [...vars];

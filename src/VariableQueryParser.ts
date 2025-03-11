@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import { assertNoUndefinedElems } from './assertions';
 import { checkArrayTypes, getValueByPath, stringifyIfObj } from './utils';
 import { unescape } from 'he';
+import VaultProperties from './VaultProperties';
 
 export const getVariableValue = (id: string, context: LiveVariablesContext) => {
 	if (id === '') return undefined;
@@ -112,19 +113,19 @@ const parseCodeBlockArgs = (argsStr: string): string[] => {
 
 export const computeValueFromQuery = (
 	query: string,
-	context: LiveVariablesContext
+	vaultProperties: VaultProperties
 ) => {
 	const varQuery = parseQuery(query);
-	return computeValue(varQuery, context);
+	return computeValue(varQuery, vaultProperties);
 };
 
 export const tryComputeValueFromQuery = (
 	query: string,
-	context: LiveVariablesContext
+	vaultProperties: VaultProperties
 ) => {
 	try {
 		const varQuery = parseQuery(query);
-		return computeValue(varQuery, context);
+		return computeValue(varQuery, vaultProperties);
 	} catch (e) {
 		return undefined;
 	}
@@ -132,17 +133,17 @@ export const tryComputeValueFromQuery = (
 
 export const computeValue = (
 	varQuery: VarQuery,
-	context: LiveVariablesContext
+	vaultProperties: VaultProperties
 ) => {
 	switch (varQuery.func) {
 		case Functions.SUM:
-			return sumFunc(varQuery.args, context);
+			return sumFunc(varQuery.args, vaultProperties);
 		case Functions.GET:
-			return getFunc(varQuery.args, context);
+			return getFunc(varQuery.args, vaultProperties);
 		case Functions.JS_FUNC:
-			return customJsFunc(varQuery.args, context);
+			return customJsFunc(varQuery.args, vaultProperties);
 		case Functions.CODE_BLOCK:
-			return codeBlockFunc(varQuery.args, context);
+			return codeBlockFunc(varQuery.args, vaultProperties);
 	}
 };
 
@@ -154,13 +155,19 @@ export enum Functions {
 	CODE_BLOCK = 'codeBlock',
 }
 
-export const getFunc = (args: string[], context: LiveVariablesContext) => {
-	const values = args.map((id) => getVariableValue(id, context));
+export const getFunc = (
+	args: string[],
+	vaultProperties: VaultProperties
+) => {
+	const values = args.map((id) => vaultProperties.getProperty(id));
 	return values[0] ?? '';
 };
 
-export const sumFunc = (args: string[], context: LiveVariablesContext) => {
-	const values = args.map((id) => getVariableValue(id, context));
+export const sumFunc = (
+	args: string[],
+	vaultProperties: VaultProperties
+) => {
+	const values = args.map((id) => vaultProperties.getProperty(id));
 	const valueType = checkArrayTypes(values);
 	const neutralValue = valueType === 'number' ? 0 : '';
 	return values.reduce(
@@ -172,11 +179,16 @@ export const sumFunc = (args: string[], context: LiveVariablesContext) => {
 	);
 };
 
-export const customJsFunc = (args: string[], context: LiveVariablesContext) => {
+export const customJsFunc = (
+	args: string[],
+	vaultProperties: VaultProperties
+) => {
 	try {
 		const lambdaStr = args[0];
 		const lambdaFunc = new Function('return ' + lambdaStr)();
-		const values = args.slice(1).map((id) => getVariableValue(id, context));
+		const values = args
+			.slice(1)
+			.map((id) => vaultProperties.getProperty(id));
 		assertNoUndefinedElems(
 			values,
 			"Can't compute an undefined value, please make sure that all variable refrences are correctly set"
@@ -190,12 +202,14 @@ export const customJsFunc = (args: string[], context: LiveVariablesContext) => {
 
 export const codeBlockFunc = (
 	args: string[],
-	context: LiveVariablesContext
+	vaultProperties: VaultProperties
 ) => {
 	try {
 		let codeBlock = args[0];
 		const lang = args[1];
-		const values = args.slice(2).map((id) => getVariableValue(id, context));
+		const values = args
+			.slice(2)
+			.map((id) => vaultProperties.getProperty(id));
 		values.forEach((value) => {
 			codeBlock = codeBlock.replace(/\{\{(.*?)\}\}/, value);
 		});
