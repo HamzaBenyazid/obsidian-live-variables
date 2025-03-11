@@ -2,10 +2,10 @@ import { FC, useEffect, useState } from 'react';
 import { VarQuery } from 'src/VariableQueryParser';
 import { QueryError } from './QueryModalReactForm';
 import Setting from './obsidian-components/Setting';
-import { stringifyIfObj, trancateString } from 'src/utils';
+import VaultProperties from 'src/VaultProperties';
 
 interface QueryGetProps {
-	variables: Record<string, never>;
+	vaultProperties: VaultProperties;
 	onQueryUpdate: (query: string) => void;
 	initQuery?: VarQuery;
 	queryError: {
@@ -18,13 +18,22 @@ export const QueryGet: FC<QueryGetProps> = ({
 	queryError,
 	onQueryUpdate,
 	initQuery,
-	variables,
+	vaultProperties,
 }) => {
-	const [arg, setArg] = useState<string>('');
-	const editMode = initQuery !== undefined;
+	const [arg, setArg] = useState<string>(initQuery?.args?.[0] ?? '');
 
 	const valideArg = () => {
-		if (variables[arg] === undefined) {
+		if (arg.length === 0) {
+			queryError.onErrorUpdate({
+				...queryError.error,
+				argsError: {
+					message: `Arguments cannot be empty`,
+					visible: queryError.error.argsError?.visible,
+				},
+			});
+			return false;
+		}
+		if (vaultProperties.getProperty(arg) === undefined) {
 			queryError.onErrorUpdate({
 				...queryError.error,
 				argsError: {
@@ -50,12 +59,6 @@ export const QueryGet: FC<QueryGetProps> = ({
 	};
 
 	useEffect(() => {
-		if (editMode) {
-			setArg(initQuery.args[0] ?? '');
-		}
-	}, [initQuery]);
-
-	useEffect(() => {
 		queryError.onErrorUpdate({
 			...queryError,
 			argsError: { ...queryError.error.argsError, visible: false },
@@ -67,15 +70,13 @@ export const QueryGet: FC<QueryGetProps> = ({
 		<>
 			<Setting
 				className="query-modal-sub-setting-item"
-				name={`Variable: ${name}`}
-				desc={`preview value: ${
-					variables[arg]
-						? trancateString(stringifyIfObj(variables[arg]), 50)
-						: 'no value'
-				}`}
+				name={`Variable:`}
+				desc={`preview value: ${vaultProperties.getPropertyPreview(
+					arg
+				)}`}
 			>
 				<Setting.Search
-					suggestions={Object.keys(variables)}
+					suggestions={vaultProperties.findPathsContaining(arg)}
 					placeHolder={`Enter argument`}
 					onChange={(value) => {
 						setArg(value);

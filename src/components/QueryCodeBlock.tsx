@@ -1,13 +1,13 @@
 import { FC, useEffect, useState } from 'react';
 import CodeEditor from './CodeEditor';
 import Setting from './obsidian-components/Setting';
-import { stringifyIfObj, trancateString } from 'src/utils';
 import { VarQuery } from 'src/VariableQueryParser';
 import { QueryError } from './QueryModalReactForm';
 import { escape } from 'he';
+import VaultProperties from 'src/VaultProperties';
 
 interface QueryCodeBlockProps {
-	variables: Record<string, never>;
+	vaultProperties: VaultProperties;
 	onQueryUpdate: (query: string) => void;
 	initQuery?: VarQuery;
 	queryError: {
@@ -17,7 +17,7 @@ interface QueryCodeBlockProps {
 }
 
 export const QueryCodeBlock: FC<QueryCodeBlockProps> = ({
-	variables,
+	vaultProperties,
 	onQueryUpdate,
 	initQuery,
 	queryError,
@@ -30,7 +30,16 @@ export const QueryCodeBlock: FC<QueryCodeBlockProps> = ({
 
 	const valideArgs = () => {
 		const exactSize = Array.from(new Set(codeBlockArgs)).length;
-		if (vars.some((v) => v[1].length === 0)) return false;
+		if (vars.some((v) => v[1].length === 0)) {
+			queryError.onErrorUpdate({
+				...queryError.error,
+				argsError: {
+					message: `Arguments cannot be empty`,
+					visible: queryError.error.argsError?.visible,
+				},
+			});
+			return false;
+		}
 		if (exactSize && vars.length === exactSize) {
 			return vars.every(valideArg);
 		}
@@ -38,7 +47,7 @@ export const QueryCodeBlock: FC<QueryCodeBlockProps> = ({
 	};
 
 	const valideArg = ([name, val]: [string, string]): boolean => {
-		if (variables[val] === undefined) {
+		if (vaultProperties.getProperty(val) === undefined) {
 			queryError.onErrorUpdate({
 				...queryError.error,
 				argsError: {
@@ -156,17 +165,14 @@ export const QueryCodeBlock: FC<QueryCodeBlockProps> = ({
 						className="query-modal-sub-setting-item"
 						key={index + 1}
 						name={`Variable: ${name}`}
-						desc={`preview value: ${
-							variables[val]
-								? trancateString(
-										stringifyIfObj(variables[val]),
-										50
-								  )
-								: 'no value'
-						}`}
+						desc={`preview value: ${vaultProperties.getPropertyPreview(
+							val
+						)}`}
 					>
 						<Setting.Search
-							suggestions={Object.keys(variables)}
+							suggestions={vaultProperties.findPathsContaining(
+								val
+							)}
 							placeHolder={`Enter argument ${index + 1}`}
 							onChange={(value) => {
 								const newVars = [...vars];
