@@ -79,6 +79,12 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 
 		const [vars, setVars] = useState<[string, string][]>([]);
 
+		const updateVar = (index: number, [name, val]: string[]) => {
+			const newVars = [...vars];
+			newVars[index] = [name, val];
+			setVars([...newVars]);
+		};
+
 		const addableArg = () => {
 			const exactSize = args.length;
 			return (exactSize || exactSize === 0) && exactSize > vars.length;
@@ -90,7 +96,13 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 		};
 
 		const valideArgs = () => {
-			const exactSize = args.length;
+			if (args.length === 0) {
+				queryError.onErrorUpdate({
+					...queryError.error,
+					argsError: undefined,
+				});
+				return true;
+			}
 			if (vars.some((v) => v[1].length === 0)) {
 				queryError.onErrorUpdate({
 					...queryError.error,
@@ -101,7 +113,7 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 				});
 				return false;
 			}
-			if (exactSize && vars.length === exactSize) {
+			if (vars.length === args.length) {
 				return vars.every(valideArg);
 			}
 			return false;
@@ -173,8 +185,7 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 		};
 
 		const loadCurrentQuery = () => {
-			if (initQuery && initQuery.args.length < 2) return;
-			else if (initQuery) {
+			if (initQuery) {
 				const [funcCode, ...funcArgs] = initQuery.args;
 				setCode(funcCode);
 				const args = [...getArgNames(funcCode)];
@@ -311,10 +322,7 @@ export const QueryJsFunc = forwardRef<JsFuncRef, QueryJsFuncProps>(
 								)}
 								placeHolder={`Enter argument ${index + 1}`}
 								onChange={(value) => {
-									const newVars = [...vars];
-									newVars[index][0] = name;
-									newVars[index][1] = value;
-									setVars(newVars);
+									updateVar(index, [name, value]);
 								}}
 								value={vars[index][1]}
 							/>
